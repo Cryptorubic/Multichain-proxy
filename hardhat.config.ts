@@ -14,7 +14,7 @@ const DEFAULT_PRIVATE_KEY = process.env.MNEMONIC || '100000000000000000000000000
 
 
 const DEFAULT_COMPILER_SETTINGS: SolcUserConfig = {
-  version: '0.8.14',
+  version: '0.8.9',
   settings: {
     optimizer: {
       enabled: true,

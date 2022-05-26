@@ -8,6 +8,7 @@ import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 import '@openzeppelin/contracts/access/AccessControl.sol';
 import '@openzeppelin/contracts/security/Pausable.sol';
 // import './interfaces/IWETH.sol';
+import './interfaces/IAnyswapV4Router.sol';
 import './libraries/FullMath.sol';
 
 contract SwapBase is AccessControl, Pausable {
@@ -29,7 +30,6 @@ contract SwapBase is AccessControl, Pausable {
 
     // Crypto fee amount blockchainId -> fee amount
     mapping(uint64 => uint256) public dstCryptoFee;
-
 
     // minimal amount of bridged token
     mapping(address => uint256) public minSwapAmount;
@@ -106,15 +106,7 @@ contract SwapBase is AccessControl, Pausable {
         }
     }
 
-    // ============== fee logic ==============
-
-    function _calculateCryptoFee(uint256 _fee, uint64 _dstChainId) internal view returns (uint256 updatedFee) {
-        require(_fee >= dstCryptoFee[_dstChainId], 'too few crypto fee');
-        uint256 _updatedFee = _fee - dstCryptoFee[_dstChainId];
-        return (_updatedFee);
-    }
-
-    function _calculatePlatformFee(
+    function _calculateFee(
         address _integrator,
         address _token,
         uint256 _amountWithFee
@@ -141,25 +133,35 @@ contract SwapBase is AccessControl, Pausable {
     }
 
     function smartApprove(
-        IERC20 tokenIn,
-        uint256 amount,
-        address to
-    ) internal {
-        uint256 _allowance = tokenIn.allowance(address(this), to);
-        if (_allowance < amount) {
+        IERC20 _token,
+        uint256 _amount,
+        address _to
+    ) private {
+        uint256 _allowance = _token.allowance(address(this), _to);
+        if (_allowance < _amount) {
             if (_allowance == 0) {
-                tokenIn.safeApprove(to, type(uint256).max);
+                _token.safeApprove(_to, type(uint256).max);
             } else {
-                try tokenIn.approve(to, type(uint256).max) returns (bool res) {
+                try _token.approve(_to, type(uint256).max) returns (bool res) {
                     require(res == true, 'approve failed');
                 } catch {
-                    tokenIn.safeApprove(to, 0);
-                    tokenIn.safeApprove(to, type(uint256).max);
+                    _token.safeApprove(_to, 0);
+                    _token.safeApprove(_to, type(uint256).max);
                 }
             }
         }
     }
 
+    function multichainCall(
+        uint256 _amountIn,
+        uint256 _dstChainId,
+        IERC20 _tokenOut,
+        address _anyToken
+    ) internal {
+        smartApprove(_tokenOut, _amountIn, AnyRouter);
+        IAnyswapV4Router(AnyRouter).anySwapOutUnderlying(_anyToken, msg.sender, _amountIn, _dstChainId);
+    }
+
     // This is needed to receive ETH when calling `IWETH.withdraw`
-    fallback() external payable {}
+    receive() payable external {}
 }

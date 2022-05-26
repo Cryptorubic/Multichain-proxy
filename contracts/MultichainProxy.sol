@@ -5,51 +5,16 @@ pragma solidity >=0.8.9;
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/access/AccessControl.sol';
 import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
-import './interfaces/IAnyswapV4Router.sol';
 import './libraries/FullMath.sol';
-import "./SwapBase.sol";
+import './BridgeSwap.sol';
 
-contract MultichainProxy is ReentrancyGuard, AccessControl, SwapBase {
+contract MultichainProxy is ReentrancyGuard, AccessControl, BridgeSwap {
     using SafeERC20 for IERC20;
 
     constructor(address _anyRouter) {
         RubicFee = 100;
         AnyRouter = _anyRouter;
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-    }
-
-    function multichainCall(
-        IERC20 _token,
-        uint256 _amountInTotal,
-        address _integrator,
-        uint256 _dstChainId
-    ) public {
-        _token.safeTransferFrom(msg.sender, address(this), _amountInTotal);
-
-        uint256 _amountIn = _calculateFee(_integrator, _amountInTotal, address(_token));
-
-        uint256 _allowance = _token.allowance(address(this), AnyRouter);
-        if (_allowance < _amountIn) {
-            if (_allowance == 0) {
-                _token.safeApprove(AnyRouter, type(uint256).max);
-            } else {
-                try _token.approve(AnyRouter, type(uint256).max) returns (bool res) {
-                    require(res == true, 'MultichainProxy: approve failed');
-                } catch {
-                    _token.safeApprove(AnyRouter, 0);
-                    _token.safeApprove(AnyRouter, type(uint256).max);
-                }
-            }
-        }
-
-        uint256 balanceBefore = _token.balanceOf(address(this));
-
-        IAnyswapV4Router(AnyRouter).anySwapOutUnderlying(address(_anyToken), msg.sender, _amountIn, _dstChainId);
-
-        require(
-            (balanceBefore - _token.balanceOf(address(this))) == _amountIn,
-            'MultichainProxy: different amount spent'
-        );
     }
 
     function setRubicFee(uint256 _fee) external onlyManager {
@@ -104,32 +69,6 @@ contract MultichainProxy is ReentrancyGuard, AccessControl, SwapBase {
             Address.sendValue(payable(msg.sender), amount);
         } else {
             IERC20(_token).transfer(msg.sender, amount);
-        }
-    }
-
-    function _calculateFee(
-        address _integrator,
-        address _token,
-        uint256 _amountWithFee
-    ) internal returns (uint256 amountWithoutFee) {
-        uint256 _integratorPercent = integratorFee[_integrator];
-
-        // integrator fee is supposed not to be zero
-        if (_integratorPercent > 0) {
-            uint256 _platformPercent = platformShare[_integrator];
-
-            uint256 _integratorAndPlatformFee = FullMath.mulDiv(_amountWithFee, _integratorPercent, 1e6);
-
-            uint256 _platformFee = FullMath.mulDiv(_integratorAndPlatformFee, _platformPercent, 1e6);
-
-            integratorCollectedFee[_integrator][_token] += _integratorAndPlatformFee - _platformFee;
-            collectedFee[_token] += _platformFee;
-
-            amountWithoutFee = _amountWithFee - _integratorAndPlatformFee;
-        } else {
-            amountWithoutFee = FullMath.mulDiv(_amountWithFee, 1e6 - RubicFee, 1e6);
-
-            collectedFee[_token] += _amountWithFee - amountWithoutFee;
         }
     }
 }
