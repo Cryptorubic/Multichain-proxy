@@ -10,4 +10,10 @@ interface IAnyswapV4Router {
         uint256 amount,
         uint256 toChainID
     ) external;
+
+    function anySwapOutNative(
+        address token,
+        address to,
+        uint256 toChainID
+    ) external payable;
 }

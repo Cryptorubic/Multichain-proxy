@@ -2,73 +2,130 @@
 
 pragma solidity >=0.8.9;
 
-import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
-import '@openzeppelin/contracts/access/AccessControl.sol';
-import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 import './libraries/FullMath.sol';
 import './BridgeSwap.sol';
 
 contract MultichainProxy is ReentrancyGuard, AccessControl, BridgeSwap {
     using SafeERC20 for IERC20;
+    using EnumerableSet for EnumerableSet.AddressSet;
 
-    constructor(address _anyRouter) {
-        RubicFee = 100;
+    constructor(address _anyRouter, address _nativeWrap) {
+        RubicFee = 3000;
         AnyRouter = _anyRouter;
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setupRole(MANAGER, msg.sender);
+        nativeWrap = _nativeWrap;
     }
 
-    function setRubicFee(uint256 _fee) external onlyManager {
-        require(_fee <= 1e6, 'MultichainProxy: fee too high');
-        RubicFee = _fee;
+    function _sendToken(
+        address _token,
+        uint256 _amount,
+        address _receiver,
+        bool _nativeOut
+    ) private {
+        if (_token == nativeWrap && _nativeOut == true) {
+            IWETH(nativeWrap).withdraw(_amount);
+            (bool sent, ) = _receiver.call{value: _amount, gas: 50000}('');
+            require(sent, 'failed to send native');
+        } else {
+            IERC20(_token).safeTransfer(_receiver, _amount);
+        }
     }
 
-    function setIntegratorFee(
-        address _provider,
-        uint256 _fee,
-        uint256 _platformShare
+    function setRubicFee(uint256 _feeRubic) external onlyManager {
+        require(_feeRubic <= 1000000, 'incorrect fee amount');
+        RubicFee = _feeRubic;
+    }
+
+    function setRubicShare(address _integrator, uint256 _percent) external onlyManager {
+        require(_percent <= 1000000, 'incorrect fee amount');
+        require(_integrator != address(0));
+        platformShare[_integrator] = _percent;
+    }
+
+    function setIntegrator(address _integrator, uint256 _percent) external onlyManager {
+        require(_percent <= 1000000, 'incorrect fee amount');
+        require(_integrator != address(0));
+        integratorFee[_integrator] = _percent;
+    }
+
+    function setNativeWrap(address _nativeWrap) external onlyManager {
+        nativeWrap = _nativeWrap;
+    }
+
+    function addSupportedDex(address[] memory _dexes) external onlyManager {
+        for (uint256 i = 0; i < _dexes.length; i++) {
+            supportedDEXes.add(_dexes[i]);
+        }
+    }
+
+    function removeSupportedDex(address[] memory _dexes) external onlyManager {
+        for (uint256 i = 0; i < _dexes.length; i++) {
+            supportedDEXes.remove(_dexes[i]);
+        }
+    }
+
+    function getSupportedDEXes() public view returns (address[] memory dexes) {
+        return supportedDEXes.values();
+    }
+
+    function integratorCollectFee(
+        address _integrator,
+        address _token,
+        uint256 _amount,
+        bool _nativeOut
+    ) external nonReentrant onlyManager {
+        require(integratorCollectedFee[_integrator][_token] >= _amount, 'MultichainProxy: amount too big');
+        _sendToken(_token, _amount, _integrator, _nativeOut);
+        integratorCollectedFee[_integrator][_token] -= _amount;
+    }
+
+    function collectIntegratorFee(
+        address _token,
+        address _integrator,
+        uint256 _amount,
+        bool _nativeOut
     ) external onlyManager {
-        require(_fee <= 1e6, 'MultichainProxy: fee too high');
-
-        integratorFee[_provider] = _fee;
-        platformShare[_provider] = _platformShare;
+        require(integratorCollectedFee[_token][_integrator] >= _amount, 'MultichainProxy: amount too big');
+        _sendToken(_token, _amount, _integrator, _nativeOut);
+        integratorCollectedFee[_token][_integrator] -= _amount;
     }
 
-    function collectIntegratorFee(address _token) external nonReentrant {
-        uint256 amount = integratorCollectedFee[_token][msg.sender];
-        require(amount > 0, 'MultichainProxy: amount is zero');
-
-        integratorCollectedFee[_token][msg.sender] = 0;
-
-        if (_token == address(0)) {
-            Address.sendValue(payable(msg.sender), amount);
-        } else {
-            IERC20(_token).transfer(msg.sender, amount);
-        }
+    function collectRubicFee(
+        address _token,
+        uint256 _amount,
+        bool _nativeOut
+    ) external onlyManager {
+        require(collectedFee[_token] >= _amount, 'MultichainProxy: amount too big');
+        _sendToken(_token, _amount, msg.sender, _nativeOut);
+        collectedFee[_token] -= _amount;
     }
 
-    function collectIntegratorFee(address _token, address _provider) external onlyManager {
-        uint256 amount = integratorCollectedFee[_token][_provider];
-        require(amount > 0, 'MultichainProxy: amount is zero');
-
-        integratorCollectedFee[_token][_provider] = 0;
-
-        if (_token == address(0)) {
-            Address.sendValue(payable(_provider), amount);
-        } else {
-            IERC20(_token).transfer(_provider, amount);
-        }
+    function setMinSwapAmount(address _token, uint256 _amount) external onlyManager {
+        minSwapAmount[_token] = _amount;
     }
 
-    function collectRubicFee(address _token) external onlyManager {
-        uint256 amount = collectedFee[_token];
-        require(amount > 0, 'MultichainProxy: amount is zero');
+    function setMaxSwapAmount(address _token, uint256 _amount) external onlyManager {
+        maxSwapAmount[_token] = _amount;
+    }
 
-        collectedFee[_token] = 0;
+    function setAnyRouter(address _anyRouter) external onlyManager {
+        AnyRouter = _anyRouter;
+    }
 
-        if (_token == address(0)) {
-            Address.sendValue(payable(msg.sender), amount);
-        } else {
-            IERC20(_token).transfer(msg.sender, amount);
-        }
+    function sweepTokens(
+        address _token,
+        uint256 _amount,
+        bool _nativeOut
+    ) external onlyManager {
+        _sendToken(_token, _amount, msg.sender, _nativeOut);
+    }
+
+    function pauseRubic() external onlyManager {
+        _pause();
+    }
+
+    function unPauseRubic() external onlyManager {
+        _unpause();
     }
 }

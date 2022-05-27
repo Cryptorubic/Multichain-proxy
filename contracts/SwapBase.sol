@@ -4,10 +4,11 @@ pragma solidity >=0.8.9;
 
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 import '@openzeppelin/contracts/access/AccessControl.sol';
 import '@openzeppelin/contracts/security/Pausable.sol';
-// import './interfaces/IWETH.sol';
+import './interfaces/IWETH.sol';
 import './interfaces/IAnyswapV4Router.sol';
 import './libraries/FullMath.sol';
 
@@ -158,10 +159,15 @@ contract SwapBase is AccessControl, Pausable {
         IERC20 _tokenOut,
         address _anyToken
     ) internal {
-        smartApprove(_tokenOut, _amountIn, AnyRouter);
-        IAnyswapV4Router(AnyRouter).anySwapOutUnderlying(_anyToken, msg.sender, _amountIn, _dstChainId);
+        if (_tokenOut == nativeWrap) {
+            IWETH(nativeWrap).withdraw(_amountIn);
+            IAnyswapV4Router(AnyRouter).anySwapOutNative{value: _amountIn}(_anyToken, msg.sender, _dstChainId);
+        } else {
+            smartApprove(_tokenOut, _amountIn, AnyRouter);
+            IAnyswapV4Router(AnyRouter).anySwapOutUnderlying(_anyToken, msg.sender, _amountIn, _dstChainId);
+        }
     }
 
     // This is needed to receive ETH when calling `IWETH.withdraw`
-    receive() payable external {}
+    receive() external payable {}
 }
