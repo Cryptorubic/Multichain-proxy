@@ -10,6 +10,7 @@ import '@openzeppelin/contracts/access/AccessControl.sol';
 import '@openzeppelin/contracts/security/Pausable.sol';
 import './interfaces/IWETH.sol';
 import './interfaces/IAnyswapV4Router.sol';
+import './interfaces/IAnyswapV1ERC20.sol';
 import './libraries/FullMath.sol';
 
 contract SwapBase is AccessControl, Pausable {
@@ -137,7 +138,7 @@ contract SwapBase is AccessControl, Pausable {
         IERC20 _token,
         uint256 _amount,
         address _to
-    ) private {
+    ) internal {
         uint256 _allowance = _token.allowance(address(this), _to);
         if (_allowance < _amount) {
             if (_allowance == 0) {
@@ -159,7 +160,7 @@ contract SwapBase is AccessControl, Pausable {
         IERC20 _tokenOut,
         address _anyToken
     ) internal {
-        if (_tokenOut == nativeWrap) {
+        if (address(_tokenOut) == nativeWrap) {
             IWETH(nativeWrap).withdraw(_amountIn);
             IAnyswapV4Router(AnyRouter).anySwapOutNative{value: _amountIn}(_anyToken, msg.sender, _dstChainId);
         } else {
