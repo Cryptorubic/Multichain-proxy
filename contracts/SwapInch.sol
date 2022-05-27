@@ -9,12 +9,18 @@ contract TransferSwapInch is SwapBase {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    event SwapRequestSentInch(uint256 dstChainId, address tokenIn, uint256 amountIn, address tokenOut, uint256 amountOut);
+    event SwapRequestSentInch(
+        uint256 dstChainId,
+        address tokenIn,
+        uint256 amountIn,
+        address tokenOut,
+        uint256 amountOut
+    );
 
     /**
      * @param _amountIn the input amount that the user wants to bridge
      * @param _dstChainId destination chain ID
-     * @param _swap struct with all the data for swap V2
+     * @param _swap struct with all the data for swap Inch
      * @param _anyToken the pegged token address
      * @param _integrator the integrator address
      */
@@ -38,7 +44,7 @@ contract TransferSwapInch is SwapBase {
     /**
      * @param _amountIn the input amount that the user wants to bridge
      * @param _dstChainId destination chain ID
-     * @param _swap struct with all the data for swap V2
+     * @param _swap struct with all the data for swap Inch
      * @param _anyToken the pegged token address
      * @param _integrator the integrator address
      */

@@ -3,9 +3,9 @@
 pragma solidity >=0.8.9;
 
 import './libraries/FullMath.sol';
-import './BridgeSwap.sol';
+import './Bridge.sol';
 
-contract MultichainProxy is ReentrancyGuard, AccessControl, BridgeSwap {
+contract MultichainProxy is ReentrancyGuard, AccessControl, Bridge {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 

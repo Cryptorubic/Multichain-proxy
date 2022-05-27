@@ -4,8 +4,7 @@ pragma solidity >=0.8.9;
 
 import './SwapBase.sol';
 
-
-contract BridgeSwap is SwapBase {
+contract Bridge is SwapBase {
     using SafeERC20 for IERC20;
 
     event BridgeRequestSent(uint256 dstChainId, uint256 amount, address transitToken);

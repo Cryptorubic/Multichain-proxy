@@ -32,7 +32,7 @@ contract SwapV2 is SwapBase {
 
         _amountIn = _calculateFee(_integrator, _swap.path[0], _amountIn);
 
-        _multichainV2(_amountIn, _dstChainId, _swap, _anyToken, _integrator);
+        _multichainV2(_amountIn, _dstChainId, _swap, _anyToken);
     }
 
     /**
@@ -53,15 +53,14 @@ contract SwapV2 is SwapBase {
 
         _amountIn = _calculateFee(_integrator, _swap.path[0], _amountIn);
 
-        _multichainV2(_amountIn, _dstChainId, _swap, _anyToken, _integrator);
+        _multichainV2(_amountIn, _dstChainId, _swap, _anyToken);
     }
 
     function _multichainV2(
         uint256 _amountIn,
         uint256 _dstChainId,
         SwapInfoV2 calldata _swap,
-        address _anyToken,
-        address _integrator
+        address _anyToken
     ) private {
         require(_swap.path.length > 1 && _dstChainId != uint256(block.chainid), 'empty src swap path or same chain id');
         address tokenOut = _swap.path[_swap.path.length - 1];
