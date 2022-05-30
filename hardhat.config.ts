@@ -18,7 +18,7 @@ const DEFAULT_COMPILER_SETTINGS: SolcUserConfig = {
   settings: {
     optimizer: {
       enabled: true,
-      runs: 10_000,
+      runs: 40_000,
     },
     metadata: {
       bytecodeHash: 'none',

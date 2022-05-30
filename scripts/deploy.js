@@ -5,6 +5,7 @@ async function main() {
 
   const deploy = await factory.deploy(
       '0xd1C5966f9F5Ee6881Ff6b261BBeDa45972B1B5f3',
+      '0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83'
   );
 
   await deploy.deployed();
@@ -17,6 +18,7 @@ async function main() {
     address: deploy.address,
     constructorArguments: [
         '0xd1C5966f9F5Ee6881Ff6b261BBeDa45972B1B5f3',
+        '0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83'
     ],
   });
 }

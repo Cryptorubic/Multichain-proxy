@@ -38,7 +38,8 @@ export const deployContractFixtureInFork: Fixture<DeployContractFixture> = async
     const MultichainProxyFactory = await ethers.getContractFactory('MultichainProxy');
 
     const multichain = (await MultichainProxyFactory.deploy(
-        TEST_ROUTER_FTM
+        TEST_ROUTER_FTM,
+        TEST_WFANTOM
     )) as MultichainProxy;
 
     // part for seting storage
@@ -55,6 +56,13 @@ export const deployContractFixtureInFork: Fixture<DeployContractFixture> = async
         abiCoder.encode(['uint256'], [ethers.utils.parseEther('100000')])
     ]);
 
+    await network.provider.send('hardhat_setStorageAt', [
+        transitToken.address,
+        storageBalancePositionSwap,
+        abiCoder.encode(['uint256'], [ethers.utils.parseEther('100000')])
+    ]);
+
+    expect(await swapToken.balanceOf(wallets[0].address)).to.eq(ethers.utils.parseEther('100000'));
     expect(await swapToken.balanceOf(wallets[0].address)).to.eq(ethers.utils.parseEther('100000'));
 
     await network.provider.send('hardhat_setBalance', [
