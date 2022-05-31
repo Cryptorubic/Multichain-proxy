@@ -13,16 +13,20 @@ contract SwapV3 is SwapBase {
 
     /**
      * @param _amountIn the input amount that the user wants to bridge
+     * @param _anyRouter the multichain router address
      * @param _dstChainId destination chain ID
      * @param _swap struct with all the data for swap V3
      * @param _anyToken the pegged token address
+     * @param _funcName the name of the function supported by token
      * @param _integrator the integrator address
      */
     function multichainV3Native(
         uint256 _amountIn,
+        address _anyRouter,
         uint256 _dstChainId,
         SwapInfoV3 calldata _swap,
         address _anyToken,
+        AnyInterface _funcName,
         address _integrator
     ) external payable onlyEOA {
         require(address(_getFirstBytes20(_swap.path)) == nativeWrap, 'MultichainProxy: token mismatch');
@@ -32,35 +36,41 @@ contract SwapV3 is SwapBase {
 
         _amountIn = _calculateFee(_integrator, address(_getFirstBytes20(_swap.path)), _amountIn);
 
-        _multichainV3(_amountIn, _dstChainId, _swap, _anyToken);
+        _multichainV3(_amountIn, _dstChainId, _swap, _anyToken, _anyRouter, _funcName);
     }
 
     /**
      * @param _amountIn the input amount that the user wants to bridge
+     * @param _anyRouter the multichain router address
      * @param _dstChainId destination chain ID
      * @param _swap struct with all the data for swap V3
      * @param _anyToken the pegged token address
+     * @param _funcName the name of the function supported by token
      * @param _integrator the integrator address
      */
     function multichainV3(
         uint256 _amountIn,
+        address _anyRouter,
         uint256 _dstChainId,
         SwapInfoV3 calldata _swap,
         address _anyToken,
+        AnyInterface _funcName,
         address _integrator
     ) external onlyEOA {
         IERC20(address(_getFirstBytes20(_swap.path))).safeTransferFrom(msg.sender, address(this), _amountIn);
 
         _amountIn = _calculateFee(_integrator, address(_getFirstBytes20(_swap.path)), _amountIn);
 
-        _multichainV3(_amountIn, _dstChainId, _swap, _anyToken);
+        _multichainV3(_amountIn, _dstChainId, _swap, _anyToken, _anyRouter, _funcName);
     }
 
     function _multichainV3(
         uint256 _amountIn,
         uint256 _dstChainId,
         SwapInfoV3 calldata _swap,
-        address _anyToken
+        address _anyToken,
+        address _anyRouter,
+        AnyInterface _funcName
     ) private {
         require(
             _swap.path.length > 20 && _dstChainId != uint256(block.chainid),
@@ -70,14 +80,12 @@ contract SwapV3 is SwapBase {
         require(IAnyswapV1ERC20(_anyToken).underlying() == address(tokenOut), 'incorrect anyToken address');
         uint256 amountOut;
 
-        bool success;
-        (success, amountOut) = _trySwapV3(_swap, _amountIn);
-        if (!success) revert('MultichainProxy: swap failed');
+        amountOut = _trySwapV3(_swap, _amountIn);
 
         require(amountOut >= minSwapAmount[tokenOut], 'MultichainProxy: amount must be greater than min swap amount');
         require(amountOut <= maxSwapAmount[tokenOut], 'MultichainProxy: amount must be lower than max swap amount');
 
-        multichainCall(amountOut, _dstChainId, IERC20(tokenOut), _anyToken);
+        multichainCall(amountOut, _dstChainId, IERC20(tokenOut), _anyToken, _anyRouter, _funcName);
         emit SwapRequestSentV3(
             _dstChainId,
             address(_getFirstBytes20(_swap.path)),
@@ -87,8 +95,7 @@ contract SwapV3 is SwapBase {
         );
     }
 
-    function _trySwapV3(SwapInfoV3 memory _swap, uint256 _amount) internal returns (bool ok, uint256 amountOut) {
-        uint256 zero;
+    function _trySwapV3(SwapInfoV3 memory _swap, uint256 _amount) internal returns (uint256 amountOut) {
         require(supportedDEXes.contains(_swap.dex), 'MultichainProxy: incorrect dex');
 
         smartApprove(IERC20(address(_getFirstBytes20(_swap.path))), _amount, _swap.dex);
@@ -102,9 +109,9 @@ contract SwapV3 is SwapBase {
         );
 
         try IUniswapRouterV3(_swap.dex).exactInput(paramsV3) returns (uint256 _amountOut) {
-            return (true, _amountOut);
+            return _amountOut;
         } catch {
-            return (false, zero);
+            revert('MultichainProxy: swap failed');
         }
     }
 }

@@ -14,6 +14,7 @@ contract SwapV2 is SwapBase {
     /**
      * @param _amountIn the input amount that the user wants to bridge
      * @param _dstChainId destination chain ID
+     * @param _anyRouter the multichain router address
      * @param _swap struct with all the data for swap V2
      * @param _anyToken the pegged token address
      * @param _funcName the name of the function supported by token
@@ -21,6 +22,7 @@ contract SwapV2 is SwapBase {
      */
     function multichainV2Native(
         uint256 _amountIn,
+        address _anyRouter,
         uint256 _dstChainId,
         SwapInfoV2 calldata _swap,
         address _anyToken,
@@ -34,11 +36,12 @@ contract SwapV2 is SwapBase {
 
         _amountIn = _calculateFee(_integrator, _swap.path[0], _amountIn);
 
-        _multichainV2(_amountIn, _dstChainId, _swap, _anyToken);
+        _multichainV2(_amountIn, _dstChainId, _swap, _anyToken, _anyRouter, _funcName);
     }
 
     /**
      * @param _amountIn the input amount that the user wants to bridge
+     * @param _anyRouter the multichain router address
      * @param _dstChainId destination chain ID
      * @param _swap struct with all the data for swap V2
      * @param _anyToken the pegged token address
@@ -58,14 +61,16 @@ contract SwapV2 is SwapBase {
 
         _amountIn = _calculateFee(_integrator, _swap.path[0], _amountIn);
 
-        _multichainV2(_amountIn, _dstChainId, _swap, _anyToken);
+        _multichainV2(_amountIn, _dstChainId, _swap, _anyToken, _anyRouter, _funcName);
     }
 
     function _multichainV2(
         uint256 _amountIn,
         uint256 _dstChainId,
         SwapInfoV2 calldata _swap,
-        address _anyToken
+        address _anyToken,
+        address _anyRouter,
+        AnyInterface _funcName
     ) private {
         require(
             _swap.path.length > 1 && _dstChainId != uint256(block.chainid),
@@ -78,18 +83,16 @@ contract SwapV2 is SwapBase {
         );
         uint256 amountOut;
 
-        bool success;
-        (success, amountOut) = _trySwapV2(_swap, _amountIn);
-        if (!success) revert('MultichainProxy: swap failed');
+        amountOut = _trySwapV2(_swap, _amountIn);
 
         require(amountOut >= minSwapAmount[tokenOut], 'MultichainProxy: amount must be greater than min swap amount');
         require(amountOut <= maxSwapAmount[tokenOut], 'MultichainProxy: amount must be lower than max swap amount');
 
-        multichainCall(amountOut, _dstChainId, IERC20(tokenOut), _anyToken);
+        multichainCall(amountOut, _dstChainId, IERC20(tokenOut), _anyToken, _anyRouter, _funcName);
         emit SwapRequestSentV2(_dstChainId, _swap.path[0], _amountIn, _swap.path[_swap.path.length - 1], amountOut);
     }
 
-    function _trySwapV2(SwapInfoV2 memory _swap, uint256 _amount) internal returns (bool ok, uint256 amountOut) {
+    function _trySwapV2(SwapInfoV2 memory _swap, uint256 _amount) internal returns (uint256 amountOut) {
         require(supportedDEXes.contains(_swap.dex), 'MultichainProxy: incorrect dex');
 
         smartApprove(IERC20(_swap.path[0]), _amount, _swap.dex);
@@ -103,9 +106,9 @@ contract SwapV2 is SwapBase {
                 _swap.deadline
             )
         returns (uint256[] memory amounts) {
-            return (true, amounts[amounts.length - 1]);
+            return amounts[amounts.length - 1];
         } catch {
-            return (false, 0);
+            revert('MultichainProxy: swap failed');
         }
     }
 }
