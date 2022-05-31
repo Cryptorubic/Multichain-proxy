@@ -12,11 +12,20 @@ contract MultichainProxy is ReentrancyGuard, AccessControl, Bridge, SwapV2, Swap
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    constructor(address _anyRouter, address _nativeWrap) {
+    constructor(
+        address _nativeWrap,
+        address[] memory _supportedAnyRouters,
+        address[] memory _supportedDEXes
+    ) {
+        for (uint256 i = 0; i < _supportedAnyRouters.length; i++) {
+            supportedAnyRouters.add(_supportedAnyRouters[i]);
+        }
+        for (uint256 i = 0; i < _supportedDEXes.length; i++) {
+            supportedDEXes.add(_supportedDEXes[i]);
+        }
         RubicFee = 3000;
-        AnyRouter = _anyRouter;
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _setupRole(MANAGER, msg.sender);
+        // _setupRole(MANAGER, msg.sender);
         nativeWrap = _nativeWrap;
     }
 
@@ -29,25 +38,25 @@ contract MultichainProxy is ReentrancyGuard, AccessControl, Bridge, SwapV2, Swap
         if (_token == nativeWrap && _nativeOut == true) {
             IWETH(nativeWrap).withdraw(_amount);
             (bool sent, ) = _receiver.call{value: _amount, gas: 50000}('');
-            require(sent, 'failed to send native');
+            require(sent, 'MultichainProxy: failed to send native');
         } else {
             IERC20(_token).safeTransfer(_receiver, _amount);
         }
     }
 
     function setRubicFee(uint256 _feeRubic) external onlyManager {
-        require(_feeRubic <= 1000000, 'incorrect fee amount');
+        require(_feeRubic <= 1000000, 'MultichainProxy: incorrect fee amount');
         RubicFee = _feeRubic;
     }
 
     function setRubicShare(address _integrator, uint256 _percent) external onlyManager {
-        require(_percent <= 1000000, 'incorrect fee amount');
+        require(_percent <= 1000000, 'MultichainProxy: incorrect fee amount');
         require(_integrator != address(0));
         platformShare[_integrator] = _percent;
     }
 
     function setIntegrator(address _integrator, uint256 _percent) external onlyManager {
-        require(_percent <= 1000000, 'incorrect fee amount');
+        require(_percent <= 1000000, 'MultichainProxy: incorrect fee amount');
         require(_integrator != address(0));
         integratorFee[_integrator] = _percent;
     }
@@ -70,6 +79,22 @@ contract MultichainProxy is ReentrancyGuard, AccessControl, Bridge, SwapV2, Swap
 
     function getSupportedDEXes() public view returns (address[] memory dexes) {
         return supportedDEXes.values();
+    }
+
+    function addSupportedAnyRouters(address[] memory _routers) external onlyManager {
+        for (uint256 i = 0; i < _routers.length; i++) {
+            supportedAnyRouters.add(_routers[i]);
+        }
+    }
+
+    function removeSupportedAnyRouters(address[] memory _routers) external onlyManager {
+        for (uint256 i = 0; i < _routers.length; i++) {
+            supportedAnyRouters.remove(_routers[i]);
+        }
+    }
+
+    function getSupportedAnyRouters() public view returns (address[] memory anyRouters) {
+        return supportedAnyRouters.values();
     }
 
     function integratorCollectFee(
@@ -110,10 +135,6 @@ contract MultichainProxy is ReentrancyGuard, AccessControl, Bridge, SwapV2, Swap
 
     function setMaxSwapAmount(address _token, uint256 _amount) external onlyManager {
         maxSwapAmount[_token] = _amount;
-    }
-
-    function setAnyRouter(address _anyRouter) external onlyManager {
-        AnyRouter = _anyRouter;
     }
 
     function sweepTokens(

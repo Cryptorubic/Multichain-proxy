@@ -31,8 +31,8 @@ contract SwapInch is SwapBase {
         address _anyToken,
         address _integrator
     ) external payable onlyEOA {
-        require(_swap.path[0] == nativeWrap, 'token mismatch');
-        require(msg.value >= _amountIn, 'amount insufficient');
+        require(_swap.path[0] == nativeWrap, 'MultichainProxy: token mismatch');
+        require(msg.value >= _amountIn, 'MultichainProxy: amount insufficient');
 
         IWETH(nativeWrap).deposit{value: _amountIn}();
 
@@ -68,26 +68,30 @@ contract SwapInch is SwapBase {
         SwapInfoInch calldata _swap,
         address _anyToken
     ) private {
-        require(_swap.path.length > 1 && _dstChainId != uint256(block.chainid), 'empty src swap path or same chain id');
+        require(
+            _swap.path.length > 1 && _dstChainId != uint256(block.chainid),
+            'MultichainProxy: empty src swap path or same chain id'
+        );
         address tokenOut = _swap.path[_swap.path.length - 1];
-        require(IAnyswapV1ERC20(_anyToken).underlying() == address(tokenOut), 'incorrect anyToken address');
+        require(
+            IAnyswapV1ERC20(_anyToken).underlying() == address(tokenOut),
+            'MultichainProxy: incorrect anyToken address'
+        );
         uint256 amountOut;
 
         bool success;
         (success, amountOut) = _trySwapInch(_swap, _amountIn);
-        if (!success) revert('swap failed');
+        if (!success) revert('MultichainProxy: swap failed');
 
-        require(amountOut >= minSwapAmount[tokenOut], 'amount must be greater than min swap amount');
-        require(amountOut <= maxSwapAmount[tokenOut], 'amount must be lower than max swap amount');
+        require(amountOut >= minSwapAmount[tokenOut], 'MultichainProxy: amount must be greater than min swap amount');
+        require(amountOut <= maxSwapAmount[tokenOut], 'MultichainProxy: amount must be lower than max swap amount');
 
         multichainCall(amountOut, _dstChainId, IERC20(tokenOut), _anyToken);
         emit SwapRequestSentInch(_dstChainId, _swap.path[0], _amountIn, _swap.path[_swap.path.length - 1], amountOut);
     }
 
     function _trySwapInch(SwapInfoInch memory _swap, uint256 _amount) internal returns (bool ok, uint256 amountOut) {
-        if (!supportedDEXes.contains(_swap.dex)) {
-            return (false, 0);
-        }
+        require(supportedDEXes.contains(_swap.dex), 'MultichainProxy: incorrect dex');
 
         smartApprove(IERC20(_swap.path[0]), _amount, _swap.dex);
 

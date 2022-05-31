@@ -18,6 +18,7 @@ contract SwapBase is AccessControl, Pausable {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     EnumerableSet.AddressSet internal supportedDEXes;
+    EnumerableSet.AddressSet internal supportedAnyRouters;
 
     // Collected fee amount for Rubic and integrators
     // token -> amount of collected fees
@@ -40,8 +41,6 @@ contract SwapBase is AccessControl, Pausable {
 
     // platform Rubic fee
     uint256 public RubicFee;
-
-    address public AnyRouter;
 
     // erc20 wrap of gas token of this chain, eg. WETH
     address public nativeWrap;
@@ -91,6 +90,12 @@ contract SwapBase is AccessControl, Pausable {
         address[] path;
         bytes data;
         uint256 amountOutMinimum;
+    }
+
+    enum AnyInterface {
+        anySwapOutUnderlying,
+        anySwapOutNative,
+        anySwapOut
     }
 
     // returns address of first token for V3
@@ -145,7 +150,7 @@ contract SwapBase is AccessControl, Pausable {
                 _token.safeApprove(_to, type(uint256).max);
             } else {
                 try _token.approve(_to, type(uint256).max) returns (bool res) {
-                    require(res == true, 'approve failed');
+                    require(res == true, 'MultichainProxy: approve failed');
                 } catch {
                     _token.safeApprove(_to, 0);
                     _token.safeApprove(_to, type(uint256).max);
@@ -158,14 +163,21 @@ contract SwapBase is AccessControl, Pausable {
         uint256 _amountIn,
         uint256 _dstChainId,
         IERC20 _tokenOut,
-        address _anyToken
+        address _anyToken,
+        address _anyRouter,
+        AnyInterface _funcName
     ) internal {
-        if (address(_tokenOut) == nativeWrap) {
+        require(supportedAnyRouters.contains(_anyRouter), 'MultichainProxy: incorrect anyRouter');
+        if (AnyInterface.anySwapOutUnderlying == _funcName) {
+            smartApprove(_tokenOut, _amountIn, _anyRouter);
+            IAnyswapV4Router(_anyRouter).anySwapOutUnderlying(_anyToken, msg.sender, _amountIn, _dstChainId);
+        }
+        if (AnyInterface.anySwapOutNative == _funcName) {
             IWETH(nativeWrap).withdraw(_amountIn);
-            IAnyswapV4Router(AnyRouter).anySwapOutNative{value: _amountIn}(_anyToken, msg.sender, _dstChainId);
+            IAnyswapV4Router(_anyRouter).anySwapOutNative{value: _amountIn}(_anyToken, msg.sender, _dstChainId);
         } else {
-            smartApprove(_tokenOut, _amountIn, AnyRouter);
-            IAnyswapV4Router(AnyRouter).anySwapOutUnderlying(_anyToken, msg.sender, _amountIn, _dstChainId);
+            smartApprove(_tokenOut, _amountIn, _anyRouter);
+            IAnyswapV4Router(_anyRouter).anySwapOut(address(_tokenOut), msg.sender, _amountIn, _dstChainId);
         }
     }
 

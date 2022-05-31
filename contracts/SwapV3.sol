@@ -25,8 +25,8 @@ contract SwapV3 is SwapBase {
         address _anyToken,
         address _integrator
     ) external payable onlyEOA {
-        require(address(_getFirstBytes20(_swap.path)) == nativeWrap, 'token mismatch');
-        require(msg.value >= _amountIn, 'amount insufficient');
+        require(address(_getFirstBytes20(_swap.path)) == nativeWrap, 'MultichainProxy: token mismatch');
+        require(msg.value >= _amountIn, 'MultichainProxy: amount insufficient');
 
         IWETH(nativeWrap).deposit{value: _amountIn}();
 
@@ -64,7 +64,7 @@ contract SwapV3 is SwapBase {
     ) private {
         require(
             _swap.path.length > 20 && _dstChainId != uint256(block.chainid),
-            'empty src swap path or same chain id'
+            'MultichainProxy: empty src swap path or same chain id'
         );
         address tokenOut = address(_getLastBytes20(_swap.path));
         require(IAnyswapV1ERC20(_anyToken).underlying() == address(tokenOut), 'incorrect anyToken address');
@@ -72,10 +72,10 @@ contract SwapV3 is SwapBase {
 
         bool success;
         (success, amountOut) = _trySwapV3(_swap, _amountIn);
-        if (!success) revert('swap failed');
+        if (!success) revert('MultichainProxy: swap failed');
 
-        require(amountOut >= minSwapAmount[tokenOut], 'amount must be greater than min swap amount');
-        require(amountOut <= maxSwapAmount[tokenOut], 'amount must be lower than max swap amount');
+        require(amountOut >= minSwapAmount[tokenOut], 'MultichainProxy: amount must be greater than min swap amount');
+        require(amountOut <= maxSwapAmount[tokenOut], 'MultichainProxy: amount must be lower than max swap amount');
 
         multichainCall(amountOut, _dstChainId, IERC20(tokenOut), _anyToken);
         emit SwapRequestSentV3(
@@ -89,9 +89,7 @@ contract SwapV3 is SwapBase {
 
     function _trySwapV3(SwapInfoV3 memory _swap, uint256 _amount) internal returns (bool ok, uint256 amountOut) {
         uint256 zero;
-        if (!supportedDEXes.contains(_swap.dex)) {
-            return (false, 0);
-        }
+        require(supportedDEXes.contains(_swap.dex), 'MultichainProxy: incorrect dex');
 
         smartApprove(IERC20(address(_getFirstBytes20(_swap.path))), _amount, _swap.dex);
 
