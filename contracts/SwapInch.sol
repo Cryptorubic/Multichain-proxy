@@ -35,6 +35,7 @@ contract SwapInch is SwapBase {
         AnyInterface _funcName,
         address _integrator
     ) external payable onlyEOA {
+        // TODO pausable
         require(_swap.path[0] == nativeWrap, 'MultichainProxy: token mismatch');
         require(msg.value >= _amountIn, 'MultichainProxy: amount insufficient');
 

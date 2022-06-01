@@ -98,17 +98,17 @@ contract MultichainProxy is ReentrancyGuard, AccessControl, Bridge, SwapV2, Swap
     }
 
     function integratorCollectFee(
-        address _integrator,
         address _token,
+        address _integrator,
         uint256 _amount,
         bool _nativeOut
-    ) external nonReentrant onlyManager {
+    ) external nonReentrant {
         require(integratorCollectedFee[_integrator][_token] >= _amount, 'MultichainProxy: amount too big');
         _sendToken(_token, _amount, _integrator, _nativeOut);
         integratorCollectedFee[_integrator][_token] -= _amount;
     }
 
-    function collectIntegratorFee(
+    function collectIntegratorFeeManual(
         address _token,
         address _integrator,
         uint256 _amount,
