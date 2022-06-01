@@ -31,9 +31,6 @@ contract SwapBase is AccessControl, Pausable {
     // integrator -> percent for Rubic
     mapping(address => uint256) public platformShare;
 
-    // Crypto fee amount blockchainId -> fee amount
-    mapping(uint64 => uint256) public dstCryptoFee;
-
     // minimal amount of bridged token
     mapping(address => uint256) public minSwapAmount;
     // maximum amount of bridged token
@@ -66,9 +63,7 @@ contract SwapBase is AccessControl, Pausable {
 
     struct SwapInfoV2 {
         address dex; // the DEX to use for the swap
-        // if this array has only one element, it means no need to swap
         address[] path;
-        // the following fields are only needed if path.length > 1
         uint256 deadline; // deadline for the swap
         uint256 amountOutMinimum; // minimum receive amount for the swap
     }

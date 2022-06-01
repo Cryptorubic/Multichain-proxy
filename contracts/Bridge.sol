@@ -7,7 +7,11 @@ import './SwapBase.sol';
 contract Bridge is SwapBase {
     using SafeERC20 for IERC20;
 
-    event BridgeRequestSent(uint256 dstChainId, uint256 amount, address transitToken);
+    event BridgeRequestSent(
+        uint256 dstChainId,
+        uint256 amount,
+        address transitToken
+    );
 
     /**
      * @param _amountIn the input amount that the user wants to bridge
@@ -26,7 +30,7 @@ contract Bridge is SwapBase {
         address _anyToken,
         AnyInterface _funcName,
         address _integrator
-    ) external payable onlyEOA {
+    ) external payable onlyEOA nonReentrant {
         require(address(_bridgeToken) == nativeWrap, 'MultichainProxy: token mismatch');
         require(msg.value >= _amountIn, 'MultichainProxy: amount insufficient');
 
@@ -81,6 +85,7 @@ contract Bridge is SwapBase {
             'MultichainProxy: amount must be lower than max swap amount'
         );
 
+        // TODO since not every token is underlying this might be changed
         require(
             IAnyswapV1ERC20(_anyToken).underlying() == address(bridgeToken),
             'MultichainProxy: incorrect anyToken address'

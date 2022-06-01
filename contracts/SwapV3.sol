@@ -9,7 +9,13 @@ contract SwapV3 is SwapBase {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    event SwapRequestSentV3(uint256 dstChainId, address tokenIn, uint256 amountIn, address tokenOut, uint256 amountOut);
+    event SwapRequestSentV3(
+        uint256 dstChainId,
+        address tokenIn,
+        uint256 amountIn,
+        address tokenOut,
+        uint256 amountOut
+    );
 
     /**
      * @param _amountIn the input amount that the user wants to bridge
@@ -28,13 +34,11 @@ contract SwapV3 is SwapBase {
         address _anyToken,
         AnyInterface _funcName,
         address _integrator
-    ) external payable onlyEOA {
+    ) external payable onlyEOA nonReentrant {
         require(address(_getFirstBytes20(_swap.path)) == nativeWrap, 'MultichainProxy: token mismatch');
         require(msg.value >= _amountIn, 'MultichainProxy: amount insufficient');
 
         IWETH(nativeWrap).deposit{value: _amountIn}();
-
-        _amountIn = _calculateFee(_integrator, address(_getFirstBytes20(_swap.path)), _amountIn);
 
         _multichainV3(_amountIn, _dstChainId, _swap, _anyToken, _anyRouter, _funcName);
     }
@@ -59,8 +63,6 @@ contract SwapV3 is SwapBase {
     ) external onlyEOA {
         IERC20(address(_getFirstBytes20(_swap.path))).safeTransferFrom(msg.sender, address(this), _amountIn);
 
-        _amountIn = _calculateFee(_integrator, address(_getFirstBytes20(_swap.path)), _amountIn);
-
         _multichainV3(_amountIn, _dstChainId, _swap, _anyToken, _anyRouter, _funcName);
     }
 
@@ -84,6 +86,8 @@ contract SwapV3 is SwapBase {
 
         require(amountOut >= minSwapAmount[tokenOut], 'MultichainProxy: amount must be greater than min swap amount');
         require(amountOut <= maxSwapAmount[tokenOut], 'MultichainProxy: amount must be lower than max swap amount');
+
+        amountOut = _calculateFee(_integrator, tokenOut, amountOut);
 
         multichainCall(amountOut, _dstChainId, IERC20(tokenOut), _anyToken, _anyRouter, _funcName);
         emit SwapRequestSentV3(

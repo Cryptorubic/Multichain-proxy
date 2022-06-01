@@ -34,14 +34,12 @@ contract SwapInch is SwapBase {
         address _anyToken,
         AnyInterface _funcName,
         address _integrator
-    ) external payable onlyEOA {
+    ) external payable onlyEOA nonReentrant {
         // TODO pausable
         require(_swap.path[0] == nativeWrap, 'MultichainProxy: token mismatch');
         require(msg.value >= _amountIn, 'MultichainProxy: amount insufficient');
 
         IWETH(nativeWrap).deposit{value: _amountIn}();
-
-        _amountIn = _calculateFee(_integrator, _swap.path[0], _amountIn);
 
         _multichainInch(_amountIn, _dstChainId, _swap, _anyToken, _anyRouter, _funcName);
     }
@@ -65,8 +63,6 @@ contract SwapInch is SwapBase {
         address _integrator
     ) external onlyEOA {
         IERC20(_swap.path[0]).safeTransferFrom(msg.sender, address(this), _amountIn);
-
-        _amountIn = _calculateFee(_integrator, _swap.path[0], _amountIn);
 
         _multichainInch(_amountIn, _dstChainId, _swap, _anyToken, _anyRouter, _funcName);
     }
@@ -94,6 +90,8 @@ contract SwapInch is SwapBase {
 
         require(amountOut >= minSwapAmount[tokenOut], 'MultichainProxy: amount must be greater than min swap amount');
         require(amountOut <= maxSwapAmount[tokenOut], 'MultichainProxy: amount must be lower than max swap amount');
+
+        amountOut = _calculateFee(_integrator, tokenOut, amountOut);
 
         (amountOut, _dstChainId, IERC20(tokenOut), _anyToken, _anyRouter, _funcName);
         emit SwapRequestSentInch(_dstChainId, _swap.path[0], _amountIn, _swap.path[_swap.path.length - 1], amountOut);
