@@ -45,7 +45,7 @@ contract MultichainProxy is OnlySourceFunctionality {
         );
     }
 
-    function multiCall(BaseCrossChainParams memory _params) external payable nonReentrant whenNotPaused {
+    function multiBridge(BaseCrossChainParams memory _params) external payable nonReentrant whenNotPaused {
         (address underlyingToken, bool isNative) = _getUnderlyingToken(_params.srcInputToken, _params.router);
 
         uint256 tokenInAfter;
@@ -61,7 +61,7 @@ contract MultichainProxy is OnlySourceFunctionality {
             _params.srcInputToken
         );
 
-        accrueFixedCryptoFee(_params.integrator, _info);
+        accrueFixedCryptoFee(_params.integrator, _info); // add require msg.value left == 0 ?
 
         _transferToMultichain(
             _params.srcInputToken,
@@ -73,17 +73,131 @@ contract MultichainProxy is OnlySourceFunctionality {
             isNative
         );
 
-        if (
-            tokenInAfter - IERC20Upgradeable(_params.srcInputToken).balanceOf(address(this)) != _params.srcInputAmount
-        ) {
+        _amountAndAllowanceChecks(_params.srcInputToken, _params.router, _params.srcInputAmount, tokenInAfter);
+
+        emit RequestSent(_params, 'native:Multichain');
+    }
+
+    function multiBridgeNative(BaseCrossChainParams memory _params) external payable nonReentrant whenNotPaused {
+        (address underlyingToken, bool isNative) = _getUnderlyingToken(_params.srcInputToken, _params.router);
+
+        IntegratorFeeInfo memory _info = integratorToFeeInfo[_params.integrator];
+
+        _params.srcInputAmount = accrueTokenFees(
+            _params.integrator,
+            _info,
+            accrueFixedCryptoFee(_params.integrator, _info),
+            0,
+            _params.srcInputToken
+        );
+
+        _transferToMultichain(
+            _params.srcInputToken,
+            _params.router,
+            _params.srcInputAmount,
+            _params.recipient,
+            _params.dstChainID,
+            underlyingToken,
+            isNative
+        );
+
+        emit RequestSent(_params, 'native:Multichain');
+    }
+
+    function multiBridgeSwap(
+        BaseCrossChainParams memory _params,
+        address _dex,
+        address _tokenOut,
+        bytes calldata _swapData
+    ) external payable nonReentrant whenNotPaused {
+        uint256 tokenInAfter;
+        (_params.srcInputAmount, tokenInAfter) = _checkAmountIn(_params.srcInputToken, _params.srcInputAmount);
+
+        IntegratorFeeInfo memory _info = integratorToFeeInfo[_params.integrator];
+
+        _params.srcInputAmount = accrueTokenFees(
+            _params.integrator,
+            _info,
+            _params.srcInputAmount,
+            0,
+            _params.srcInputToken
+        );
+
+        IERC20Upgradeable(_params.srcInputToken).safeApprove(_dex, _params.srcInputAmount);
+
+        uint256 tokenOutBefore = IERC20Upgradeable(_tokenOut).balanceOf(address(this));
+        AddressUpgradeable.functionCallWithValue(_dex, _swapData, accrueFixedCryptoFee(_params.integrator, _info));
+        uint256 amountOut = IERC20Upgradeable(_tokenOut).balanceOf(address(this)) - tokenOutBefore;
+
+        _amountAndAllowanceChecks(_params.srcInputToken, _dex, _params.srcInputAmount, tokenInAfter);
+
+        (address underlyingToken, bool isNative) = _getUnderlyingToken(_tokenOut, _params.router);
+
+        _transferToMultichain(
+            _tokenOut,
+            _params.router,
+            amountOut,
+            _params.recipient,
+            _params.dstChainID,
+            underlyingToken,
+            isNative
+        );
+
+        // already know amount out
+        // _amountAndAllowanceChecks(_params.srcInputToken, _params.router, _params.srcInputAmount, tokenInAfter);
+
+        emit RequestSent(_params, 'native:Multichain');
+    }
+
+    function multiBridgeNative(
+        BaseCrossChainParams memory _params,
+        address _dex,
+        address _tokenOut,
+        bytes calldata _swapData
+    ) external payable nonReentrant whenNotPaused {
+        IntegratorFeeInfo memory _info = integratorToFeeInfo[_params.integrator];
+
+        _params.srcInputAmount = accrueTokenFees(
+            _params.integrator,
+            _info,
+            accrueFixedCryptoFee(_params.integrator, _info),
+            0,
+            _params.srcInputToken
+        );
+
+        uint256 tokenOutBefore = IERC20Upgradeable(_tokenOut).balanceOf(address(this));
+        AddressUpgradeable.functionCallWithValue(_dex, _swapData, _params.srcInputAmount);
+        uint256 amountOut = IERC20Upgradeable(_tokenOut).balanceOf(address(this)) - tokenOutBefore;
+
+        (address underlyingToken, bool isNative) = _getUnderlyingToken(_tokenOut, _params.router);
+
+        _transferToMultichain(
+            _tokenOut,
+            _params.router,
+            amountOut,
+            _params.recipient,
+            _params.dstChainID,
+            underlyingToken,
+            isNative
+        );
+
+        emit RequestSent(_params, 'native:Multichain');
+    }
+
+    function _amountAndAllowanceChecks(
+        address _tokenIn,
+        address _router,
+        uint256 _amountIn,
+        uint256 tokenInAfter
+    ) internal {
+        if (tokenInAfter - IERC20Upgradeable(_tokenIn).balanceOf(address(this)) != _amountIn) {
             revert DifferentAmountSpent();
         }
 
         // reset allowance back to zero, just in case
-        if (IERC20Upgradeable(_params.srcInputToken).allowance(address(this), _params.router) > 0) {
-            IERC20Upgradeable(_params.srcInputToken).safeApprove(_params.router, 0);
+        if (IERC20Upgradeable(_tokenIn).allowance(address(this), _router) > 0) {
+            IERC20Upgradeable(_tokenIn).safeApprove(_router, 0);
         }
-        emit RequestSent(_params, 'native:Multichain');
     }
 
     function _checkAmountIn(address _tokenIn, uint256 _amountIn) internal returns (uint256, uint256) {
@@ -150,7 +264,7 @@ contract MultichainProxy is OnlySourceFunctionality {
         // Token must implement IAnyswapToken interface
         if (token == address(0)) revert ZeroAddress();
         underlyingToken = IAnyswapToken(token).underlying();
-        // The native token does not use the standard null address ID
+        // The native token does not use the standard null address
         isNative = IAnyswapRouter(router).wNATIVE() == underlyingToken;
         // Some Multichain complying tokens may wrap nothing
         if (!isNative && underlyingToken == address(0)) {
