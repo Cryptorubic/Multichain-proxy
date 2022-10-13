@@ -144,6 +144,7 @@ contract MultichainProxy is OnlySourceFunctionality {
         );
 
         // already know amount out
+        // allowance check?
         // _amountAndAllowanceChecks(_params.srcInputToken, _params.router, _params.srcInputAmount, tokenInAfter);
 
         emit RequestSent(_params, 'native:Multichain');

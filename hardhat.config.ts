@@ -157,6 +157,11 @@ module.exports = {
             url: `https://mainnet.telos.net/evm`,
             chainId: 40,
             accounts: [`0x${DEFAULT_PRIVATE_KEY}`]
+        },
+        kava: {
+            url: "https://evm.kava.io",
+            chainId: 2222,
+            accounts: [`0x${DEFAULT_PRIVATE_KEY}`]
         }
     },
     etherscan: {
@@ -228,6 +233,13 @@ module.exports = {
                     apiURL: 'https://api.aurorascan.dev/api',
                     browserURL: 'https://aurorascan.dev/'
                 }
+            },
+            {
+                network: "kava",
+                chainId: 2222,
+                urls: {
+                  apiURL: "https://explorer.kava.io/api",
+                  browserURL: "https://explorer.kava.io",
             },
             // {
             //   network: "moonbeam",
