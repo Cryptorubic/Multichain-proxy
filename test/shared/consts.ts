@@ -8,7 +8,8 @@ export const FIXED_CRYPTO_FEE = BigNumber.from(ethers.utils.parseEther('1'));
 export const MIN_TOKEN_AMOUNT = BigNumber.from('1' + '0'.repeat(17));
 export const MAX_TOKEN_AMOUNT = BigNumber.from(ethers.utils.parseEther('10'));
 export const DEFAULT_AMOUNT_IN = BigNumber.from(ethers.utils.parseEther('1'));
-export const DEFAULT_MESSAGE = 'native:Multichain';
+export const DEFAULT_DST_CHAIN = 2222;
+export const DEFAULT_EMPTY_MESSAGE = '0x';
 
 export const ANY_ROUTER_POLY = '0x84cEbCa6bd17fE11F7864F7003a1A30f2852B1dC';
 export const NATIVE_POLY = '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270';

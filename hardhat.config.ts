@@ -36,7 +36,8 @@ module.exports = {
         hardhat: {
             chainId: 137,
             forking: {
-                url: `https://polygon-rpc.com`
+                url: `https://polygon-rpc.com`,
+                blockNumber: 34298636
             },
             allowUnlimitedContractSize: true,
             loggingEnabled: false,
@@ -240,6 +241,7 @@ module.exports = {
                 urls: {
                   apiURL: "https://explorer.kava.io/api",
                   browserURL: "https://explorer.kava.io",
+                }
             },
             // {
             //   network: "moonbeam",

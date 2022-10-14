@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-magic-numbers */
 import { Fixture } from 'ethereum-waffle';
 import { ethers, network } from 'hardhat';
 import { MultichainProxy, TestERC20, WETH9 } from '../../typechain';
@@ -54,7 +55,7 @@ export const deployContractFixtureInFork: Fixture<DeployContractFixture> = async
 
     const storageBalancePositionSwap = ethers.utils.keccak256(
         abiCoder.encode(['address'], [wallets[0].address]) +
-            abiCoder.encode(['uint256'], [2]).slice(2, 66)
+            abiCoder.encode(['uint256'], [0]).slice(2, 66)
     );
 
     await network.provider.send('hardhat_setStorageAt', [
@@ -69,7 +70,10 @@ export const deployContractFixtureInFork: Fixture<DeployContractFixture> = async
         abiCoder.encode(['uint256'], [ethers.utils.parseEther('100000')])
     ]);
 
-    expect(await swapToken.balanceOf(wallets[0].address)).to.eq(ethers.utils.parseEther('100000'));
+    expect(await transitToken.balanceOf(wallets[0].address)).to.eq(
+        ethers.utils.parseEther('100000')
+    );
+
     expect(await swapToken.balanceOf(wallets[0].address)).to.eq(ethers.utils.parseEther('100000'));
 
     await network.provider.send('hardhat_setBalance', [

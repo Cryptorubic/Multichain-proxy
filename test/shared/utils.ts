@@ -1,63 +1,96 @@
-// import { IUniswapV2Router02 } from '../../typechain';
-// import { IUniswapRouterV3 } from '../../typechain';
-// import UniV2JSON from '@uniswap/v2-periphery/build/UniswapV2Router02.json';
-// import UniV3JSON from '@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json';
-// import { ethers } from 'hardhat';
-// import { Wallet } from '@ethersproject/wallet';
-// import { DEADLINE } from './consts';
-//
-// export const getRouterV2 = async function (
-//     wallet: Wallet,
-//     routerAddress: string
-// ): Promise<IUniswapV2Router02> {
-//     const routerFactory = ethers.ContractFactory.fromSolidity(UniV2JSON);
-//     let router = routerFactory.attach(routerAddress) as IUniswapV2Router02;
-//     router = router.connect(wallet);
-//
-//     return router;
-// };
-//
-// export const createPoolV2 = async function (
-//     wallet: Wallet,
-//     routerAddress: string,
-//     token: string,
-//     tokenAmount = ethers.utils.parseEther('100')
-// ): Promise<IUniswapV2Router02> {
-//     const router = await getRouterV2(wallet, routerAddress);
-//
-//     await router.addLiquidityETH(
-//         token,
-//         tokenAmount,
-//         tokenAmount,
-//         ethers.utils.parseEther('100'),
-//         await router.signer.getAddress(),
-//         DEADLINE,
-//         { value: ethers.utils.parseEther('100') }
-//     );
-//
-//     return router;
-// };
-//
-// export const getRouterV3 = async function (
-//     wallet: Wallet,
-//     routerAddressV3: string
-// ): Promise<IUniswapRouterV3> {
-//     const routerFactoryV3 = ethers.ContractFactory.fromSolidity(UniV3JSON);
-//     let routerV3 = routerFactoryV3.attach(routerAddressV3) as IUniswapRouterV3;
-//     routerV3 = routerV3.connect(wallet);
-//
-//     return routerV3;
-// };
-//
-// export function hexStringToByteArray(hexString) {
-//     if (hexString.length % 2 !== 0) {
-//         // eslint-disable-next-line @typescript-eslint/no-throw-literal
-//         throw 'Must have an even number of hex digits to convert to bytes';
-//     }
-//     var numBytes = hexString.length / 2;
-//     var byteArray = new Uint8Array(numBytes);
-//     for (var i = 0; i < numBytes; i++) {
-//         byteArray[i] = parseInt(hexString.substr(i * 2, 2), 16);
-//     }
-//     return byteArray;
-// }
+import { MultichainProxy } from '../../typechain';
+import { BigNumber, BigNumberish } from 'ethers';
+import { DENOMINATOR } from './consts';
+
+export async function calcTokenFees({
+    bridge,
+    amountWithFee,
+    integrator
+}: {
+    bridge: MultichainProxy;
+    amountWithFee: BigNumber;
+    integrator?: string;
+}): Promise<{
+    amountWithoutFee: BigNumber;
+    feeAmount: BigNumber;
+    RubicFee: BigNumber;
+    integratorFee: BigNumber;
+}> {
+    let feeAmount;
+    let RubicFee;
+    let integratorFee;
+    let amountWithoutFee;
+
+    if (integrator !== undefined) {
+        const feeInfo = await bridge.integratorToFeeInfo(integrator);
+        if (feeInfo.isIntegrator) {
+            feeAmount = amountWithFee.mul(feeInfo.tokenFee).div(DENOMINATOR);
+            RubicFee = feeAmount.mul(feeInfo.RubicTokenShare).div(DENOMINATOR);
+            integratorFee = feeAmount.sub(RubicFee);
+            amountWithoutFee = amountWithFee.sub(feeAmount);
+        } else {
+            // console.log('WARNING: integrator is not active');
+
+            const fee = await bridge.RubicPlatformFee();
+
+            feeAmount = amountWithFee.mul(fee).div(DENOMINATOR);
+            RubicFee = feeAmount;
+            amountWithoutFee = amountWithFee.sub(feeAmount);
+        }
+    } else {
+        const fee = await bridge.RubicPlatformFee();
+
+        feeAmount = amountWithFee.mul(fee).div(DENOMINATOR);
+        RubicFee = feeAmount;
+        amountWithoutFee = amountWithFee.sub(feeAmount);
+    }
+
+    //console.log(feeAmount, RubicFee, integratorFee, amountWithoutFee)
+
+    return { feeAmount, RubicFee, integratorFee, amountWithoutFee };
+}
+
+export async function calcCryptoFees({
+    bridge,
+    integrator,
+    dstChainID
+}: {
+    bridge: MultichainProxy;
+    integrator?: string;
+    dstChainID?: BigNumberish;
+}): Promise<{
+    totalCryptoFee: BigNumber;
+    fixedCryptoFee: BigNumber;
+    RubicFixedFee: BigNumber;
+    integratorFixedFee: BigNumber;
+    gasFee: BigNumber;
+}> {
+    let totalCryptoFee;
+    let fixedCryptoFee;
+    let RubicFixedFee;
+    let integratorFixedFee;
+    let gasFee;
+
+    if (integrator !== undefined) {
+        const feeInfo = await bridge.integratorToFeeInfo(integrator);
+        if (feeInfo.isIntegrator) {
+            totalCryptoFee = feeInfo.fixedFeeAmount;
+            fixedCryptoFee = totalCryptoFee;
+
+            RubicFixedFee = totalCryptoFee.mul(feeInfo.RubicFixedCryptoShare).div(DENOMINATOR);
+            integratorFixedFee = totalCryptoFee.sub(RubicFixedFee);
+        } else {
+            // console.log('WARNING: integrator is not active');
+
+            totalCryptoFee = await bridge.fixedCryptoFee();
+
+            RubicFixedFee = totalCryptoFee;
+        }
+    } else {
+        totalCryptoFee = await bridge.fixedCryptoFee();
+
+        RubicFixedFee = totalCryptoFee;
+    }
+
+    return { totalCryptoFee, fixedCryptoFee, RubicFixedFee, integratorFixedFee, gasFee };
+}

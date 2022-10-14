@@ -49,7 +49,7 @@ contract MultichainProxy is OnlySourceFunctionality {
         (address underlyingToken, bool isNative) = _getUnderlyingToken(_params.srcInputToken, _params.router);
 
         uint256 tokenInAfter;
-        (_params.srcInputAmount, tokenInAfter) = _checkAmountIn(_params.srcInputToken, _params.srcInputAmount);
+        (_params.srcInputAmount, tokenInAfter) = _checkAmountIn(underlyingToken, _params.srcInputAmount);
 
         IntegratorFeeInfo memory _info = integratorToFeeInfo[_params.integrator];
 
@@ -58,7 +58,7 @@ contract MultichainProxy is OnlySourceFunctionality {
             _info,
             _params.srcInputAmount,
             0,
-            _params.srcInputToken
+            underlyingToken
         );
 
         accrueFixedCryptoFee(_params.integrator, _info); // add require msg.value left == 0 ?
@@ -73,7 +73,7 @@ contract MultichainProxy is OnlySourceFunctionality {
             isNative
         );
 
-        _amountAndAllowanceChecks(_params.srcInputToken, _params.router, _params.srcInputAmount, tokenInAfter);
+        _amountAndAllowanceChecks(underlyingToken, _params.router, _params.srcInputAmount, tokenInAfter);
 
         emit RequestSent(_params, 'native:Multichain');
     }
@@ -88,7 +88,7 @@ contract MultichainProxy is OnlySourceFunctionality {
             _info,
             accrueFixedCryptoFee(_params.integrator, _info),
             0,
-            _params.srcInputToken
+            underlyingToken
         );
 
         _transferToMultichain(
@@ -144,13 +144,13 @@ contract MultichainProxy is OnlySourceFunctionality {
         );
 
         // already know amount out
-        // allowance check?
-        // _amountAndAllowanceChecks(_params.srcInputToken, _params.router, _params.srcInputAmount, tokenInAfter);
+        // allowance check? Its safe to approve multichain for uintmax
+        // _amountAndAllowanceChecks(...
 
         emit RequestSent(_params, 'native:Multichain');
     }
 
-    function multiBridgeNative(
+    function multiBridgeSwapNative(
         BaseCrossChainParams memory _params,
         address _dex,
         address _tokenOut,
@@ -245,7 +245,7 @@ contract MultichainProxy is OnlySourceFunctionality {
             IAnyswapRouter(_anyRouter).anySwapOutNative{value: _amount}(_tokenIn, _recipient, _dstChain);
         } else {
             // Give Anyswap approval to bridge tokens
-            IERC20Upgradeable(_tokenIn).safeApprove(_anyRouter, _amount);
+            IERC20Upgradeable(_underlyingToken).safeApprove(_anyRouter, _amount);
             // Was the token wrapping another token?
             if (_tokenIn != _underlyingToken) {
                 IAnyswapRouter(_anyRouter).anySwapOutUnderlying(_tokenIn, _recipient, _amount, _dstChain);
