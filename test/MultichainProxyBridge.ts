@@ -10,7 +10,9 @@ import {
     DEFAULT_DST_CHAIN,
     ANY_ROUTER_POLY,
     TRANSIT_ANY_TOKEN,
-    DEX
+    DEX,
+    NATIVE_POLY,
+    ANY_NATIVE_POLY
 } from './shared/consts';
 import { BigNumber as BN, BigNumberish, BytesLike, ContractTransaction } from 'ethers';
 import { calcCryptoFees } from './shared/utils';
@@ -144,8 +146,15 @@ describe('Multichain Proxy', () => {
             });
 
             it('Should transfer transit token to AnyRouter', async () => {
-                await transitToken.approve(multichain.address, ethers.constants.MaxUint256);
                 await expect(callBridge('0x')).to.emit(multichain, 'RequestSent');
+            });
+        });
+
+        describe('#multiBridgeNative', () => {
+            it.only('Should transfer native token to AnyRouter', async () => {
+                await expect(
+                    callBridge('0x', { srcInputToken: ANY_NATIVE_POLY }, DEFAULT_AMOUNT_IN)
+                ).to.emit(multichain, 'RequestSent');
             });
         });
         // describe('#bridgeMultichainNative', () => {

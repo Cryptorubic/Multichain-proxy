@@ -79,7 +79,7 @@ contract MultichainProxy is OnlySourceFunctionality {
     }
 
     function multiBridgeNative(BaseCrossChainParams memory _params) external payable nonReentrant whenNotPaused {
-        (address underlyingToken, bool isNative) = _getUnderlyingToken(_params.srcInputToken, _params.router); // TODO delete unerlying?
+        (address underlyingToken, bool isNative) = _getUnderlyingToken(_params.srcInputToken, _params.router);
 
         IntegratorFeeInfo memory _info = integratorToFeeInfo[_params.integrator];
 
@@ -163,7 +163,7 @@ contract MultichainProxy is OnlySourceFunctionality {
             _info,
             accrueFixedCryptoFee(_params.integrator, _info),
             0,
-            _params.srcInputToken
+            address(0)
         );
 
         uint256 tokenOutBefore = IERC20Upgradeable(_tokenOut).balanceOf(address(this));
