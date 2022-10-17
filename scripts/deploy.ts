@@ -8,7 +8,7 @@ async function main() {
     const MultichainProxyFactory = await ethers.getContractFactory('MultichainProxy');
     const chain = Config.chains.find(_chain => _chain.id === network.config.chainId)!;
 
-    const deploy = await MultichainProxyFactory.deploy(0, 0, chain.dex, [], []);
+    const deploy = await MultichainProxyFactory.deploy(0, 0, chain.dex, [], [], []);
 
     await deploy.deployed();
 
@@ -21,7 +21,7 @@ async function main() {
 
     await hre.run('verify:verify', {
         address: deploy.address,
-        constructorArguments: [0, 0, chain.dex, [], []]
+        constructorArguments: [0, 0, chain.dex, [], [], []]
     });
 }
 

@@ -22,7 +22,7 @@
   },
   "devDependencies": {
     "@cronos-labs/hardhat-cronoscan": "^0.0.4",
-    "@nomiclabs/hardhat-etherscan": "^3.0.3",
+    "@nomiclabs/hardhat-etherscan": "^3.1.1",
     "@openzeppelin/contracts-upgradeable": "^4.5.2",
     "@openzeppelin/hardhat-upgrades": "^1.17.0",
     "@openzeppelin/test-helpers": "^0.5.15",
