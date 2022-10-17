@@ -18,18 +18,18 @@ contract MultichainProxy is OnlySourceFunctionality {
 
     constructor(
         uint256 _fixedCryptoFee,
-        uint256 _RubicPlatformFee,
+        uint256 _rubicPlatformFee,
         address[] memory _routers,
         address[] memory _tokens,
         uint256[] memory _minTokenAmounts,
         uint256[] memory _maxTokenAmounts
     ) {
-        initialize(_fixedCryptoFee, _RubicPlatformFee, _routers, _tokens, _minTokenAmounts, _maxTokenAmounts);
+        initialize(_fixedCryptoFee, _rubicPlatformFee, _routers, _tokens, _minTokenAmounts, _maxTokenAmounts);
     }
 
     function initialize(
         uint256 _fixedCryptoFee,
-        uint256 _RubicPlatformFee,
+        uint256 _rubicPlatformFee,
         address[] memory _routers,
         address[] memory _tokens,
         uint256[] memory _minTokenAmounts,
@@ -37,7 +37,7 @@ contract MultichainProxy is OnlySourceFunctionality {
     ) private initializer {
         __OnlySourceFunctionalityInit(
             _fixedCryptoFee,
-            _RubicPlatformFee,
+            _rubicPlatformFee,
             _routers,
             _tokens,
             _minTokenAmounts,
