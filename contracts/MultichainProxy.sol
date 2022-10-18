@@ -74,7 +74,9 @@ contract MultichainProxy is OnlySourceFunctionality {
         );
 
         _amountAndAllowanceChecks(underlyingToken, _params.router, _params.srcInputAmount, tokenInAfter);
-
+        
+        // emit underlying token token
+        _params.srcInputToken = underlyingToken;
         emit RequestSent(_params, 'native:Multichain');
     }
 
@@ -101,13 +103,15 @@ contract MultichainProxy is OnlySourceFunctionality {
             isNative
         );
 
+        // emit underlying native token
+        _params.srcInputToken = address(0);
         emit RequestSent(_params, 'native:Multichain');
     }
 
     function multiBridgeSwap(
         BaseCrossChainParams memory _params,
         address _dex,
-        address _tokenOut,
+        address _anyTokenOut,
         bytes calldata _swapData
     ) external payable nonReentrant whenNotPaused {
         uint256 tokenInAfter;
@@ -125,16 +129,16 @@ contract MultichainProxy is OnlySourceFunctionality {
 
         IERC20Upgradeable(_params.srcInputToken).safeApprove(_dex, _params.srcInputAmount);
 
-        uint256 tokenOutBefore = IERC20Upgradeable(_tokenOut).balanceOf(address(this)); // should be underlying token here
+        uint256 tokenOutBefore = IERC20Upgradeable(_anyTokenOut).balanceOf(address(this)); // should be underlying token here
         AddressUpgradeable.functionCallWithValue(_dex, _swapData, accrueFixedCryptoFee(_params.integrator, _info));
-        uint256 amountOut = IERC20Upgradeable(_tokenOut).balanceOf(address(this)) - tokenOutBefore;
+        uint256 amountOut = IERC20Upgradeable(_anyTokenOut).balanceOf(address(this)) - tokenOutBefore;
 
         _amountAndAllowanceChecks(_params.srcInputToken, _dex, _params.srcInputAmount, tokenInAfter);
 
-        (address underlyingToken, bool isNative) = _getUnderlyingToken(_tokenOut, _params.router);
+        (address underlyingToken, bool isNative) = _getUnderlyingToken(_anyTokenOut, _params.router);
 
         _transferToMultichain(
-            _tokenOut,
+            _anyTokenOut,
             _params.router,
             amountOut,
             _params.recipient,
@@ -153,7 +157,7 @@ contract MultichainProxy is OnlySourceFunctionality {
     function multiBridgeSwapNative(
         BaseCrossChainParams memory _params,
         address _dex,
-        address _tokenOut,
+        address _anyTokenOut,
         bytes calldata _swapData
     ) external payable nonReentrant whenNotPaused {
         IntegratorFeeInfo memory _info = integratorToFeeInfo[_params.integrator];
@@ -166,14 +170,14 @@ contract MultichainProxy is OnlySourceFunctionality {
             address(0)
         );
 
-        uint256 tokenOutBefore = IERC20Upgradeable(_tokenOut).balanceOf(address(this));
+        uint256 tokenOutBefore = IERC20Upgradeable(_anyTokenOut).balanceOf(address(this));
         AddressUpgradeable.functionCallWithValue(_dex, _swapData, _params.srcInputAmount);
-        uint256 amountOut = IERC20Upgradeable(_tokenOut).balanceOf(address(this)) - tokenOutBefore;
+        uint256 amountOut = IERC20Upgradeable(_anyTokenOut).balanceOf(address(this)) - tokenOutBefore;
 
-        (address underlyingToken, bool isNative) = _getUnderlyingToken(_tokenOut, _params.router);
+        (address underlyingToken, bool isNative) = _getUnderlyingToken(_anyTokenOut, _params.router);
 
         _transferToMultichain(
-            _tokenOut,
+            _anyTokenOut,
             _params.router,
             amountOut,
             _params.recipient,

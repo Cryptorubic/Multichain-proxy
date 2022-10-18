@@ -15,7 +15,7 @@ import {
     ANY_NATIVE_POLY
 } from './shared/consts';
 import { BigNumber as BN, BigNumberish, BytesLike, ContractTransaction } from 'ethers';
-import { calcCryptoFees } from './shared/utils';
+import { calcCryptoFees, calcTokenFees } from './shared/utils';
 const hre = require('hardhat');
 
 const createFixtureLoader = waffle.createFixtureLoader;
@@ -146,15 +146,51 @@ describe('Multichain Proxy', () => {
             });
 
             it('Should transfer transit token to AnyRouter', async () => {
+                const { feeAmount, RubicFee } = await calcTokenFees({
+                    bridge: multichain,
+                    amountWithFee: DEFAULT_AMOUNT_IN
+                });
+                const { totalCryptoFee } = await calcCryptoFees({
+                    bridge: multichain,
+                    integrator: ethers.constants.AddressZero
+                });
+
                 await expect(callBridge('0x')).to.emit(multichain, 'RequestSent');
+
+                expect(await transitToken.allowance(multichain.address, ANY_ROUTER_POLY)).to.be.eq(
+                    0
+                );
+                expect(await swapToken.allowance(multichain.address, ANY_ROUTER_POLY)).to.be.eq(0);
+                expect(await waffle.provider.getBalance(multichain.address)).to.be.eq(
+                    totalCryptoFee,
+                    'wrong amount of swapped native on the contract as fees'
+                );
+                expect(
+                    await multichain.availableRubicTokenFee(ethers.constants.AddressZero)
+                ).to.be.eq(RubicFee, 'wrong Rubic fees collected');
             });
         });
 
         describe('#multiBridgeNative', () => {
-            it.only('Should transfer native token to AnyRouter', async () => {
+            it('Should transfer native token to AnyRouter', async () => {
+                const { feeAmount, RubicFee } = await calcTokenFees({
+                    bridge: multichain,
+                    amountWithFee: DEFAULT_AMOUNT_IN
+                });
+                const { totalCryptoFee } = await calcCryptoFees({
+                    bridge: multichain,
+                    integrator: ethers.constants.AddressZero
+                });
                 await expect(
                     callBridge('0x', { srcInputToken: ANY_NATIVE_POLY }, DEFAULT_AMOUNT_IN)
                 ).to.emit(multichain, 'RequestSent');
+                expect(await waffle.provider.getBalance(multichain.address)).to.be.eq(
+                    feeAmount.add(totalCryptoFee),
+                    'wrong amount of swapped native on the contract as fees'
+                );
+                expect(
+                    await multichain.availableRubicTokenFee(ethers.constants.AddressZero)
+                ).to.be.eq(RubicFee, 'wrong Rubic fees collected');
             });
         });
         // describe('#bridgeMultichainNative', () => {
