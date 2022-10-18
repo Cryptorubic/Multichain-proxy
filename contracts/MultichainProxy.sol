@@ -53,13 +53,7 @@ contract MultichainProxy is OnlySourceFunctionality {
 
         IntegratorFeeInfo memory _info = integratorToFeeInfo[_params.integrator];
 
-        _params.srcInputAmount = accrueTokenFees(
-            _params.integrator,
-            _info,
-            _params.srcInputAmount,
-            0,
-            underlyingToken
-        );
+        _params.srcInputAmount = accrueTokenFees(_params.integrator, _info, _params.srcInputAmount, 0, underlyingToken);
 
         accrueFixedCryptoFee(_params.integrator, _info); // add require msg.value left == 0 ?
 
@@ -74,7 +68,7 @@ contract MultichainProxy is OnlySourceFunctionality {
         );
 
         _amountAndAllowanceChecks(underlyingToken, _params.router, _params.srcInputAmount, tokenInAfter);
-        
+
         // emit underlying token token
         _params.srcInputToken = underlyingToken;
         emit RequestSent(_params, 'native:Multichain');

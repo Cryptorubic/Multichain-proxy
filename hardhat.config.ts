@@ -26,7 +26,7 @@ const DEFAULT_COMPILER_SETTINGS: SolcUserConfig = {
         },
         metadata: {
             bytecodeHash: 'none'
-        },
+        }
         // evmVersion: 'istanbul'
     }
 };
@@ -206,7 +206,7 @@ module.exports = {
             accounts: [`0x${DEFAULT_PRIVATE_KEY}`]
         },
         kava: {
-            url: "https://evm.kava.io",
+            url: 'https://evm.kava.io',
             chainId: 2222,
             live: true,
             saveDeployments: true,
@@ -249,8 +249,7 @@ module.exports = {
         //     // kava
         //     kava: "api key is not required by the Kava explorer, but can't be empty"
         // },
-        apiKey:
-            "api key is not required by the Kava explorer, but can't be empty",
+        apiKey: "api key is not required by the Kava explorer, but can't be empty",
         // `${MOONRIVER}`,
         // `${MOONBEAM}`,
         customChains: [
@@ -287,11 +286,11 @@ module.exports = {
                 }
             },
             {
-                network: "kava",
+                network: 'kava',
                 chainId: 2222,
                 urls: {
-                  apiURL: "https://explorer.kava.io/api",
-                  browserURL: "https://explorer.kava.io",
+                    apiURL: 'https://explorer.kava.io/api',
+                    browserURL: 'https://explorer.kava.io'
                 }
             },
             // {
