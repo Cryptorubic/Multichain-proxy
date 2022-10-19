@@ -125,6 +125,7 @@ contract MultichainProxy is OnlySourceFunctionality {
 
         (address underlyingToken, bool isNative) = _getUnderlyingToken(_anyTokenOut, _params.router);
 
+        // todo what if native token received?
         uint256 tokenOutBefore = IERC20Upgradeable(underlyingToken).balanceOf(address(this)); 
         AddressUpgradeable.functionCallWithValue(_dex, _swapData, accrueFixedCryptoFee(_params.integrator, _info));
         uint256 amountOut = IERC20Upgradeable(underlyingToken).balanceOf(address(this)) - tokenOutBefore;

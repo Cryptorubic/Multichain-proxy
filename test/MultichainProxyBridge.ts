@@ -274,6 +274,38 @@ describe('Multichain Proxy', () => {
                     'wrong Rubic fees collected'
                 );
             });
+
+            it.only('Should swap token for native and transfer to AnyRouter without integrator', async () => {
+                const { feeAmount, amountWithoutFee } = await calcTokenFees({
+                    bridge: multichain,
+                    amountWithFee: DEFAULT_AMOUNT_IN
+                });
+                const { totalCryptoFee } = await calcCryptoFees({
+                    bridge: multichain,
+                    integrator: ethers.constants.AddressZero
+                });
+                let swapData = await encoder.encode(
+                    amountWithoutFee,
+                    DEFAULT_AMOUNT_MIN,
+                    [swapToken.address, NATIVE_POLY],
+                    multichain.address
+                );
+                await expect(
+                    callBridge(swapData, {
+                        srcInputToken: swapToken.address,
+                        dstOutputToken: ANY_NATIVE_POLY
+                    })
+                ).to.emit(multichain, 'RequestSent');
+                expect(await waffle.provider.getBalance(multichain.address)).to.be.eq(
+                    totalCryptoFee,
+                    'wrong amount of swapped native on the contract as fees'
+                );
+                expect(await multichain.availableRubicTokenFee(swapToken.address)).to.be.eq(
+                    feeAmount,
+                    'wrong Rubic fees collected'
+                );
+            });
+
         });
     });
 });
