@@ -1,7 +1,7 @@
 import { ethers, network, waffle } from 'hardhat';
 import { deployContractFixtureInFork } from './shared/fixtures';
 import { Wallet } from '@ethersproject/wallet';
-import { MultichainProxy, TestERC20, WETH9 } from '../typechain';
+import { Encode, MultichainProxy, TestERC20, WETH9 } from '../typechain';
 import { expect } from 'chai';
 import {
     DEFAULT_EMPTY_MESSAGE,
@@ -12,7 +12,8 @@ import {
     TRANSIT_ANY_TOKEN,
     DEX,
     NATIVE_POLY,
-    ANY_NATIVE_POLY
+    ANY_NATIVE_POLY,
+    DEFAULT_AMOUNT_MIN
 } from './shared/consts';
 import { BigNumber as BN, BigNumberish, BytesLike, ContractTransaction } from 'ethers';
 import { calcCryptoFees, calcTokenFees } from './shared/utils';
@@ -23,6 +24,7 @@ const createFixtureLoader = waffle.createFixtureLoader;
 describe('Multichain Proxy', () => {
     let wallet: Wallet, swapper: Wallet;
     let swapToken: TestERC20;
+    let encoder: Encode;
     let transitToken: TestERC20;
     let multichain: MultichainProxy;
     let wnative: WETH9;
@@ -133,7 +135,7 @@ describe('Multichain Proxy', () => {
     });
 
     beforeEach('deploy fixture', async () => {
-        ({ multichain, swapToken, transitToken, wnative } = await loadFixture(
+        ({ multichain, encoder, swapToken, transitToken, wnative } = await loadFixture(
             deployContractFixtureInFork
         ));
     });
@@ -182,9 +184,12 @@ describe('Multichain Proxy', () => {
                     bridge: multichain,
                     integrator: ethers.constants.AddressZero
                 });
+                // let balanceBefore = await waffle.provider.getBalance(ANY_ROUTER_POLY);
+
                 await expect(
                     callBridge('0x', { srcInputToken: ANY_NATIVE_POLY }, DEFAULT_AMOUNT_IN)
                 ).to.emit(multichain, 'RequestSent');
+
                 expect(await waffle.provider.getBalance(multichain.address)).to.be.eq(
                     feeAmount.add(totalCryptoFee),
                     'wrong amount of swapped native on the contract as fees'
@@ -192,11 +197,14 @@ describe('Multichain Proxy', () => {
                 expect(
                     await multichain.availableRubicTokenFee(ethers.constants.AddressZero)
                 ).to.be.eq(feeAmount, 'wrong Rubic fees collected');
+                // expect(
+                //     balanceBefore.add(DEFAULT_AMOUNT_IN).sub(feeAmount).sub(totalCryptoFee)
+                // ).to.be.eq(await waffle.provider.getBalance(ANY_ROUTER_POLY));
             });
         });
 
         describe('#multiBridgeNativeSwap', () => {
-            it.only('Should swap native token and transfer to AnyRouter without integrator', async () => {
+            it('Should swap native token and transfer to AnyRouter without integrator', async () => {
                 const { feeAmount } = await calcTokenFees({
                     bridge: multichain,
                     amountWithFee: DEFAULT_AMOUNT_IN
@@ -205,9 +213,18 @@ describe('Multichain Proxy', () => {
                     bridge: multichain,
                     integrator: ethers.constants.AddressZero
                 });
+                let swapData = await encoder.encodeNative(
+                    DEFAULT_AMOUNT_MIN,
+                    [NATIVE_POLY, transitToken.address],
+                    multichain.address
+                );
+
+                // let balanceBefore = await waffle.provider.getBalance(ANY_ROUTER_POLY);
+
                 await expect(
-                    callBridge(swapToken.view, { srcInputToken: ANY_NATIVE_POLY }, DEFAULT_AMOUNT_IN)
+                    callBridge(swapData, { dstOutputToken: ANY_NATIVE_POLY }, DEFAULT_AMOUNT_IN)
                 ).to.emit(multichain, 'RequestSent');
+
                 expect(await waffle.provider.getBalance(multichain.address)).to.be.eq(
                     feeAmount.add(totalCryptoFee),
                     'wrong amount of swapped native on the contract as fees'
@@ -215,6 +232,47 @@ describe('Multichain Proxy', () => {
                 expect(
                     await multichain.availableRubicTokenFee(ethers.constants.AddressZero)
                 ).to.be.eq(feeAmount, 'wrong Rubic fees collected');
+                // expect(
+                //     balanceBefore.add(DEFAULT_AMOUNT_IN).sub(feeAmount).sub(totalCryptoFee)
+                // ).to.be.eq(await waffle.provider.getBalance(ANY_ROUTER_POLY));
+            });
+        });
+
+        describe('#multiBridgeSwap', () => {
+            beforeEach('prepare before tests', async () => {
+                transitToken.approve(multichain.address, ethers.constants.MaxUint256);
+                swapToken.approve(multichain.address, ethers.constants.MaxUint256);
+            });
+
+            it('Should swap token for token and transfer to AnyRouter without integrator', async () => {
+                const { feeAmount, amountWithoutFee } = await calcTokenFees({
+                    bridge: multichain,
+                    amountWithFee: DEFAULT_AMOUNT_IN
+                });
+                const { totalCryptoFee } = await calcCryptoFees({
+                    bridge: multichain,
+                    integrator: ethers.constants.AddressZero
+                });
+                let swapData = await encoder.encode(
+                    amountWithoutFee,
+                    DEFAULT_AMOUNT_MIN,
+                    [swapToken.address, transitToken.address],
+                    multichain.address
+                );
+                await expect(
+                    callBridge(swapData, {
+                        srcInputToken: swapToken.address,
+                        dstOutputToken: TRANSIT_ANY_TOKEN
+                    })
+                ).to.emit(multichain, 'RequestSent');
+                expect(await waffle.provider.getBalance(multichain.address)).to.be.eq(
+                    totalCryptoFee,
+                    'wrong amount of swapped native on the contract as fees'
+                );
+                expect(await multichain.availableRubicTokenFee(swapToken.address)).to.be.eq(
+                    feeAmount,
+                    'wrong Rubic fees collected'
+                );
             });
         });
     });

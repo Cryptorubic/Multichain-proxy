@@ -45,8 +45,6 @@ export async function calcTokenFees({
         amountWithoutFee = amountWithFee.sub(feeAmount);
     }
 
-    //console.log(feeAmount, RubicFee, integratorFee, amountWithoutFee)
-
     return { feeAmount, RubicFee, integratorFee, amountWithoutFee };
 }
 

@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/no-magic-numbers */
 import { Fixture } from 'ethereum-waffle';
 import { ethers, network } from 'hardhat';
-import { MultichainProxy, TestERC20, WETH9 } from '../../typechain';
-import TokenJSON from '../../artifacts/contracts/test/TestERC20.sol/TestERC20.json';
+import { MultichainProxy, TestERC20, WETH9, Encode } from '../../typechain';
 import WETHJSON from '../../artifacts/contracts/test/WETH9.sol/WETH9.json';
 import {
     RUBIC_PLATFORM_FEE,
@@ -19,6 +18,7 @@ import { expect } from 'chai';
 
 interface DeployContractFixture {
     multichain: MultichainProxy;
+    encoder: Encode;
     swapToken: TestERC20;
     transitToken: TestERC20;
     wnative: WETH9;
@@ -27,17 +27,20 @@ interface DeployContractFixture {
 export const deployContractFixtureInFork: Fixture<DeployContractFixture> = async function (
     wallets
 ): Promise<DeployContractFixture> {
-    const swapTokenFactory = ethers.ContractFactory.fromSolidity(TokenJSON);
+    const swapTokenFactory = await ethers.getContractFactory('TestERC20');
     let swapToken = swapTokenFactory.attach(SWAP_TOKEN) as TestERC20;
     swapToken = swapToken.connect(wallets[0]);
 
-    const transitTokenFactory = ethers.ContractFactory.fromSolidity(TokenJSON);
+    const transitTokenFactory = await ethers.getContractFactory('TestERC20');
     let transitToken = transitTokenFactory.attach(TRANSIT_TOKEN) as TestERC20;
     transitToken = transitToken.connect(wallets[0]);
 
     const wnativeFactory = ethers.ContractFactory.fromSolidity(WETHJSON);
     let wnative = wnativeFactory.attach(NATIVE_POLY) as WETH9;
     wnative = wnative.connect(wallets[0]);
+
+    const encodeFactory = await ethers.getContractFactory('Encode');
+    let encoder = (await encodeFactory.deploy()) as Encode;
 
     const MultichainProxyFactory = await ethers.getContractFactory('MultichainProxy');
 
@@ -83,6 +86,7 @@ export const deployContractFixtureInFork: Fixture<DeployContractFixture> = async
 
     return {
         multichain,
+        encoder,
         swapToken,
         transitToken,
         wnative

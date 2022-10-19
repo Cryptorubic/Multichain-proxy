@@ -123,13 +123,13 @@ contract MultichainProxy is OnlySourceFunctionality {
 
         IERC20Upgradeable(_params.srcInputToken).safeApprove(_dex, _params.srcInputAmount);
 
-        uint256 tokenOutBefore = IERC20Upgradeable(_anyTokenOut).balanceOf(address(this)); // should be underlying token here
+        (address underlyingToken, bool isNative) = _getUnderlyingToken(_anyTokenOut, _params.router);
+
+        uint256 tokenOutBefore = IERC20Upgradeable(underlyingToken).balanceOf(address(this)); 
         AddressUpgradeable.functionCallWithValue(_dex, _swapData, accrueFixedCryptoFee(_params.integrator, _info));
-        uint256 amountOut = IERC20Upgradeable(_anyTokenOut).balanceOf(address(this)) - tokenOutBefore;
+        uint256 amountOut = IERC20Upgradeable(underlyingToken).balanceOf(address(this)) - tokenOutBefore;
 
         _amountAndAllowanceChecks(_params.srcInputToken, _dex, _params.srcInputAmount, tokenInAfter);
-
-        (address underlyingToken, bool isNative) = _getUnderlyingToken(_anyTokenOut, _params.router);
 
         _transferToMultichain(
             _anyTokenOut,
@@ -164,11 +164,11 @@ contract MultichainProxy is OnlySourceFunctionality {
             address(0)
         );
 
-        uint256 tokenOutBefore = IERC20Upgradeable(_anyTokenOut).balanceOf(address(this));
-        AddressUpgradeable.functionCallWithValue(_dex, _swapData, _params.srcInputAmount);
-        uint256 amountOut = IERC20Upgradeable(_anyTokenOut).balanceOf(address(this)) - tokenOutBefore;
-
         (address underlyingToken, bool isNative) = _getUnderlyingToken(_anyTokenOut, _params.router);
+
+        uint256 tokenOutBefore = IERC20Upgradeable(underlyingToken).balanceOf(address(this));
+        AddressUpgradeable.functionCallWithValue(_dex, _swapData, _params.srcInputAmount);
+        uint256 amountOut = IERC20Upgradeable(underlyingToken).balanceOf(address(this)) - tokenOutBefore;
 
         _transferToMultichain(
             _anyTokenOut,

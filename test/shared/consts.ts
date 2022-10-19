@@ -8,6 +8,7 @@ export const FIXED_CRYPTO_FEE = BigNumber.from(ethers.utils.parseEther('1'));
 export const MIN_TOKEN_AMOUNT = BigNumber.from('1' + '0'.repeat(17));
 export const MAX_TOKEN_AMOUNT = BigNumber.from(ethers.utils.parseEther('10'));
 export const DEFAULT_AMOUNT_IN = BigNumber.from(ethers.utils.parseEther('1'));
+export const DEFAULT_AMOUNT_MIN = BigNumber.from(ethers.utils.parseEther('0'));
 export const DEFAULT_DST_CHAIN = 2222;
 export const DEFAULT_EMPTY_MESSAGE = '0x';
 
