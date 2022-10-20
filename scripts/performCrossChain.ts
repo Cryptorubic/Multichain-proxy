@@ -16,8 +16,10 @@ async function main() {
         '0x0C8f0d522094689E9eFeB2576AB60d54B85209dF'
     )) as MultichainProxy;
 
-    await multichain.multiBridge({'0xfa9343c3897324496a05fc75abed6bac29f8a40f',})
-    // await token.approve(multichain.address, ethers.constants.MaxUint256);
+    await multichain.addAvailableRouters([
+        '0x639a647fbe20b6c8ac19e48e2de44ea792c62c5c',
+        '0x5d9ab5522c64e1f6ef5e3627eccc093f56167818'
+    ]);
 }
 
 main()
