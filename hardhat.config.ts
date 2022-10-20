@@ -19,7 +19,7 @@ const MOONBEAM = process.env.MOONBEAM_API_KEY;
 const MOONRIVER = process.env.MOONRIVER_API_KEY;
 
 const DEFAULT_COMPILER_SETTINGS: SolcUserConfig = {
-    version: '0.8.10',
+    version: '0.8.16',
     settings: {
         optimizer: {
             enabled: true,

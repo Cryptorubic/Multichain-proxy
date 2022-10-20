@@ -11,6 +11,8 @@ import './interfaces/IAnyswapToken.sol';
 error DifferentAmountSpent();
 error RouterNotAvailable();
 error CannotBridgeToSameNetwork();
+error LessThanMinAmount();
+error MoreThanMaxAmount();
 
 contract MultichainProxy is OnlySourceFunctionality {
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
@@ -126,7 +128,7 @@ contract MultichainProxy is OnlySourceFunctionality {
         (address underlyingToken, bool isNative) = _getUnderlyingToken(_anyTokenOut, _params.router);
 
         // todo what if native token received?
-        uint256 tokenOutBefore = IERC20Upgradeable(underlyingToken).balanceOf(address(this)); 
+        uint256 tokenOutBefore = IERC20Upgradeable(underlyingToken).balanceOf(address(this));
         AddressUpgradeable.functionCallWithValue(_dex, _swapData, accrueFixedCryptoFee(_params.integrator, _info));
         uint256 amountOut = IERC20Upgradeable(underlyingToken).balanceOf(address(this)) - tokenOutBefore;
 
@@ -229,10 +231,13 @@ contract MultichainProxy is OnlySourceFunctionality {
         address _underlyingToken,
         bool _isNative
     ) private {
-        require(_amount >= minTokenAmount[_tokenIn], 'MultichainProxy: amount must be greater than min swap amount');
+        if (_amount < minTokenAmount[_tokenIn]) {
+            revert LessThanMinAmount();
+        }
         if (maxTokenAmount[_tokenIn] > 0) {
-            // TODO errors
-            require(_amount <= maxTokenAmount[_tokenIn], 'MultichainProxy: amount must be lower than max swap amount');
+            if (_amount > maxTokenAmount[_tokenIn]) {
+                revert MoreThanMaxAmount();
+            }
         }
 
         if (!availableRouters.contains(_anyRouter)) {
