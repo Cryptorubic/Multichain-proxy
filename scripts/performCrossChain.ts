@@ -26,7 +26,8 @@ async function main() {
     // 2222
     await multichain.addAvailableRouters([
         '0x639a647fbe20b6c8ac19e48e2de44ea792c62c5c',
-        '0x5d9ab5522c64e1f6ef5e3627eccc093f56167818'
+        '0x5d9ab5522c64e1f6ef5e3627eccc093f56167818',
+        '0x264c1383ea520f73dd837f915ef3a732e204a493'
     ]);
 }
 
