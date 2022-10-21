@@ -173,7 +173,7 @@ contract MultichainProxy is OnlySourceFunctionality {
             _dex,
             _swapData,
             isNative,
-            accrueFixedCryptoFee(_params.integrator, _info)
+            _params.srcInputAmount
         );
 
         _transferToMultichain(
@@ -218,7 +218,7 @@ contract MultichainProxy is OnlySourceFunctionality {
 
         AddressUpgradeable.functionCallWithValue(_dex, _data, _value);
         
-        return _isNative ? address(this).balance : IERC20Upgradeable(_tokenOut)
+        return _isNative ? address(this).balance - balanceBeforeSwap : IERC20Upgradeable(_tokenOut)
             .balanceOf(address(this)) - balanceBeforeSwap;
         
     }

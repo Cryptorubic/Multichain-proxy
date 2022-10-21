@@ -190,10 +190,10 @@ describe('Multichain Proxy', () => {
                     callBridge('0x', { srcInputToken: ANY_NATIVE_POLY }, DEFAULT_AMOUNT_IN)
                 ).to.emit(multichain, 'RequestSent');
 
-                // expect(await waffle.provider.getBalance(multichain.address)).to.be.eq(
-                //     feeAmount.add(totalCryptoFee),
-                //     'wrong amount of swapped native on the contract as fees'
-                // );
+                expect(await waffle.provider.getBalance(multichain.address)).to.be.eq(
+                    feeAmount.add(totalCryptoFee),
+                    'wrong amount of swapped native on the contract as fees'
+                );
                 expect(
                     await multichain.availableRubicTokenFee(ethers.constants.AddressZero)
                 ).to.be.eq(feeAmount, 'wrong Rubic fees collected');
@@ -205,7 +205,7 @@ describe('Multichain Proxy', () => {
 
         describe('#multiBridgeNativeSwap', () => {
             it('Should swap native token and transfer to AnyRouter without integrator', async () => {
-                const { feeAmount } = await calcTokenFees({
+                const { feeAmount, amountWithoutFee } = await calcTokenFees({
                     bridge: multichain,
                     amountWithFee: DEFAULT_AMOUNT_IN
                 });
@@ -222,16 +222,16 @@ describe('Multichain Proxy', () => {
                 // let balanceBefore = await waffle.provider.getBalance(ANY_ROUTER_POLY);
 
                 await expect(
-                    callBridge(swapData, { dstOutputToken: ANY_NATIVE_POLY }, DEFAULT_AMOUNT_IN)
+                    callBridge(swapData, { dstOutputToken: TRANSIT_ANY_TOKEN }, DEFAULT_AMOUNT_IN)
                 ).to.emit(multichain, 'RequestSent');
 
-                // expect(await waffle.provider.getBalance(multichain.address)).to.be.eq(
-                //     feeAmount.add(totalCryptoFee),
-                //     'wrong amount of swapped native on the contract as fees'
-                // );
-                // expect(
-                //     await multichain.availableRubicTokenFee(ethers.constants.AddressZero)
-                // ).to.be.eq(feeAmount, 'wrong Rubic fees collected');
+                expect(await waffle.provider.getBalance(multichain.address)).to.be.eq(
+                    feeAmount.add(totalCryptoFee),
+                    'wrong amount of swapped native on the contract as fees'
+                );
+                expect(
+                    await multichain.availableRubicTokenFee(ethers.constants.AddressZero)
+                ).to.be.eq(feeAmount, 'wrong Rubic fees collected');
                 // expect(
                 //     balanceBefore.add(DEFAULT_AMOUNT_IN).sub(feeAmount).sub(totalCryptoFee)
                 // ).to.be.eq(await waffle.provider.getBalance(ANY_ROUTER_POLY));
@@ -284,7 +284,7 @@ describe('Multichain Proxy', () => {
                     bridge: multichain,
                     integrator: ethers.constants.AddressZero
                 });
-                let swapData = await encoder.encode(
+                let swapData = await encoder.encodeTokenForNative(
                     amountWithoutFee,
                     DEFAULT_AMOUNT_MIN,
                     [swapToken.address, NATIVE_POLY],
@@ -296,16 +296,15 @@ describe('Multichain Proxy', () => {
                         dstOutputToken: ANY_NATIVE_POLY
                     })
                 ).to.emit(multichain, 'RequestSent');
-                // expect(await waffle.provider.getBalance(multichain.address)).to.be.eq(
-                //     totalCryptoFee,
-                //     'wrong amount of swapped native on the contract as fees'
-                // );
-                // expect(await multichain.availableRubicTokenFee(swapToken.address)).to.be.eq(
-                //     feeAmount,
-                //     'wrong Rubic fees collected'
-                // );
+                expect(await waffle.provider.getBalance(multichain.address)).to.be.eq(
+                    totalCryptoFee,
+                    'wrong amount of swapped native on the contract as fees'
+                );
+                expect(await multichain.availableRubicTokenFee(swapToken.address)).to.be.eq(
+                    feeAmount,
+                    'wrong Rubic fees collected'
+                );
             });
-
         });
     });
 });
