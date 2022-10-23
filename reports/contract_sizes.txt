@@ -1,12 +1,13 @@
-Generating typings for: 22 artifacts in dir: typechain for target: ethers-v5
-Successfully generated 37 typings!
-Compiled 23 Solidity files successfully
+Nothing to compile
+No need to generate any newer typings.
  ·-----------------------------------------------------------------------------------------------------------|-------------|---------------·
  |  Contract Name                                                                                            ·  Size (KB)  ·  Change (KB)  │
  ············································································································|·············|················
- |  @openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol:AddressUpgradeable                      ·      0.045  ·       +0.045  │
+ |  hardhat/console.sol:console                                                                              ·      0.045  ·       +0.045  │
  ············································································································|·············|················
  |  @openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol:StringsUpgradeable                      ·      0.045  ·       +0.045  │
+ ············································································································|·············|················
+ |  @openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol:AddressUpgradeable                      ·      0.045  ·       +0.045  │
  ············································································································|·············|················
  |  rubic-bridge-base/contracts/libraries/FullMath.sol:FullMath                                              ·      0.045  ·       +0.045  │
  ············································································································|·············|················
@@ -14,13 +15,15 @@ Compiled 23 Solidity files successfully
  ············································································································|·············|················
  |  @openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol:SafeERC20Upgradeable      ·      0.045  ·       +0.045  │
  ············································································································|·············|················
+ |  contracts/test/Encode.sol:Encode                                                                         ·      1.371  ·       +1.371  │
+ ············································································································|·············|················
  |  contracts/test/WETH9.sol:WETH9                                                                           ·      2.156  ·       +2.156  │
  ············································································································|·············|················
  |  contracts/test/TestERC20.sol:TestERC20                                                                   ·      2.435  ·       +2.435  │
  ············································································································|·············|················
- |  rubic-bridge-base/contracts/BridgeBase.sol:BridgeBase                                                    ·      9.741  ·       +9.741  │
+ |  rubic-bridge-base/contracts/BridgeBase.sol:BridgeBase                                                    ·      9.429  ·       +9.429  │
  ············································································································|·············|················
- |  rubic-bridge-base/contracts/architecture/OnlySourceFunctionality.sol:OnlySourceFunctionality             ·      9.741  ·       +9.741  │
+ |  rubic-bridge-base/contracts/architecture/OnlySourceFunctionality.sol:OnlySourceFunctionality             ·      9.429  ·       +9.429  │
  ············································································································|·············|················
- |  contracts/MultichainProxy.sol:MultichainProxy                                                            ·     17.344  ·      +17.344  │
+ |  contracts/MultichainProxy.sol:MultichainProxy                                                            ·     15.392  ·      +15.392  │
  ·-----------------------------------------------------------------------------------------------------------|-------------|---------------·

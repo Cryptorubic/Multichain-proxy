@@ -293,14 +293,14 @@ module.exports = {
                     browserURL: 'https://explorer.kava.io'
                 }
             },
-            // {
-            //   network: "moonbeam",
-            //   chainId: 1313161554,
-            //   urls: {
-            //     apiURL: "https://api.aurorascan.dev/api",
-            //     browserURL: "https://moonbeam.moonscan.io/"
-            //   }
-            // },
+            {
+              network: "moonbeam",
+              chainId: 1313161554,
+              urls: {
+                apiURL: "https://api.aurorascan.dev/api",
+                browserURL: "https://moonbeam.moonscan.io/"
+              }
+            },
             {
                 network: 'boba',
                 chainId: 288,
@@ -317,7 +317,7 @@ module.exports = {
     contractSizer: {
         alphaSort: false,
         disambiguatePaths: true,
-        runOnCompile: false
+        runOnCompile: true
     },
     typechain: {
         outDir: 'typechain',

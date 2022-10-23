@@ -252,7 +252,9 @@ contract MultichainProxy is OnlySourceFunctionality {
         address _underlyingToken,
         bool _isNative
     ) private {
-        if (_amount < minTokenAmount[_tokenIn]) {
+        // initial min amount is 0
+        // revert in case we received 0 tokens after swap
+        if (_amount <= minTokenAmount[_tokenIn]) {
             revert LessThanMinAmount();
         }
         if (maxTokenAmount[_tokenIn] > 0) {
