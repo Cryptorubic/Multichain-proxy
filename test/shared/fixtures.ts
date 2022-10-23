@@ -1,20 +1,24 @@
+/* eslint-disable @typescript-eslint/no-magic-numbers */
 import { Fixture } from 'ethereum-waffle';
 import { ethers, network } from 'hardhat';
-import { MultichainProxy, TestERC20, WETH9 } from '../../typechain';
-import TokenJSON from '../../artifacts/contracts/test/TestERC20.sol/TestERC20.json';
+import { MultichainProxy, TestERC20, WETH9, Encode } from '../../typechain';
 import WETHJSON from '../../artifacts/contracts/test/WETH9.sol/WETH9.json';
+import {
+    RUBIC_PLATFORM_FEE,
+    MIN_TOKEN_AMOUNT,
+    MAX_TOKEN_AMOUNT,
+    FIXED_CRYPTO_FEE,
+    ANY_ROUTER_POLY,
+    NATIVE_POLY,
+    SWAP_TOKEN,
+    TRANSIT_TOKEN,
+    DEX
+} from './consts';
 import { expect } from 'chai';
-
-const envConfig = require('dotenv').config();
-const {
-    NATIVE_FTM: TEST_WFANTOM,
-    SWAP_TOKEN_FTM: TEST_SWAP_TOKEN, // WETH
-    TRANSIT_TOKEN_FTM: TEST_TRANSIT_TOKEN_USDT,
-    ANY_ROUTER: TEST_ROUTER_FTM
-} = envConfig.parsed || {};
 
 interface DeployContractFixture {
     multichain: MultichainProxy;
+    encoder: Encode;
     swapToken: TestERC20;
     transitToken: TestERC20;
     wnative: WETH9;
@@ -23,23 +27,30 @@ interface DeployContractFixture {
 export const deployContractFixtureInFork: Fixture<DeployContractFixture> = async function (
     wallets
 ): Promise<DeployContractFixture> {
-    const swapTokenFactory = ethers.ContractFactory.fromSolidity(TokenJSON);
-    let swapToken = swapTokenFactory.attach(TEST_SWAP_TOKEN) as TestERC20;
+    const swapTokenFactory = await ethers.getContractFactory('TestERC20');
+    let swapToken = swapTokenFactory.attach(SWAP_TOKEN) as TestERC20;
     swapToken = swapToken.connect(wallets[0]);
 
-    const transitTokenFactory = ethers.ContractFactory.fromSolidity(TokenJSON);
-    let transitToken = transitTokenFactory.attach(TEST_TRANSIT_TOKEN_USDT) as TestERC20;
+    const transitTokenFactory = await ethers.getContractFactory('TestERC20');
+    let transitToken = transitTokenFactory.attach(TRANSIT_TOKEN) as TestERC20;
     transitToken = transitToken.connect(wallets[0]);
 
     const wnativeFactory = ethers.ContractFactory.fromSolidity(WETHJSON);
-    let wnative = wnativeFactory.attach(TEST_WFANTOM) as WETH9;
+    let wnative = wnativeFactory.attach(NATIVE_POLY) as WETH9;
     wnative = wnative.connect(wallets[0]);
+
+    const encodeFactory = await ethers.getContractFactory('Encode');
+    let encoder = (await encodeFactory.deploy()) as Encode;
 
     const MultichainProxyFactory = await ethers.getContractFactory('MultichainProxy');
 
     const multichain = (await MultichainProxyFactory.deploy(
-        TEST_ROUTER_FTM,
-        TEST_WFANTOM
+        FIXED_CRYPTO_FEE,
+        RUBIC_PLATFORM_FEE,
+        [DEX, ANY_ROUTER_POLY],
+        [transitToken.address, swapToken.address],
+        [MIN_TOKEN_AMOUNT, MIN_TOKEN_AMOUNT],
+        [MAX_TOKEN_AMOUNT, MAX_TOKEN_AMOUNT]
     )) as MultichainProxy;
 
     // part for seting storage
@@ -47,7 +58,7 @@ export const deployContractFixtureInFork: Fixture<DeployContractFixture> = async
 
     const storageBalancePositionSwap = ethers.utils.keccak256(
         abiCoder.encode(['address'], [wallets[0].address]) +
-            abiCoder.encode(['uint256'], [2]).slice(2, 66)
+            abiCoder.encode(['uint256'], [0]).slice(2, 66)
     );
 
     await network.provider.send('hardhat_setStorageAt', [
@@ -62,7 +73,10 @@ export const deployContractFixtureInFork: Fixture<DeployContractFixture> = async
         abiCoder.encode(['uint256'], [ethers.utils.parseEther('100000')])
     ]);
 
-    expect(await swapToken.balanceOf(wallets[0].address)).to.eq(ethers.utils.parseEther('100000'));
+    expect(await transitToken.balanceOf(wallets[0].address)).to.eq(
+        ethers.utils.parseEther('100000')
+    );
+
     expect(await swapToken.balanceOf(wallets[0].address)).to.eq(ethers.utils.parseEther('100000'));
 
     await network.provider.send('hardhat_setBalance', [
@@ -72,6 +86,7 @@ export const deployContractFixtureInFork: Fixture<DeployContractFixture> = async
 
     return {
         multichain,
+        encoder,
         swapToken,
         transitToken,
         wnative
