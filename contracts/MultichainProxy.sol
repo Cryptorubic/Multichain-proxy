@@ -51,7 +51,7 @@ contract MultichainProxy is OnlySourceFunctionality {
         (address underlyingToken, bool isNative) = _getUnderlyingToken(_params.srcInputToken, _params.router);
 
         uint256 tokenInAfter;
-        (_params.srcInputAmount, tokenInAfter) = _checkAmountIn(underlyingToken, _params.srcInputAmount);
+        (_params.srcInputAmount, tokenInAfter) = _receiveTokens(underlyingToken, _params.srcInputAmount);
 
         IntegratorFeeInfo memory _info = integratorToFeeInfo[_params.integrator];
 
@@ -110,7 +110,7 @@ contract MultichainProxy is OnlySourceFunctionality {
         BaseCrossChainParams memory _params
     ) external payable nonReentrant whenNotPaused {
         uint256 tokenInAfter;
-        (_params.srcInputAmount, tokenInAfter) = _checkAmountIn(_params.srcInputToken, _params.srcInputAmount);
+        (_params.srcInputAmount, tokenInAfter) = _receiveTokens(_params.srcInputToken, _params.srcInputAmount);
 
         IntegratorFeeInfo memory _info = integratorToFeeInfo[_params.integrator];
 
@@ -229,7 +229,7 @@ contract MultichainProxy is OnlySourceFunctionality {
                 : IERC20Upgradeable(_tokenOut).balanceOf(address(this)) - balanceBeforeSwap;
     }
 
-    function _checkAmountIn(address _tokenIn, uint256 _amountIn) internal returns (uint256, uint256) {
+    function _receiveTokens(address _tokenIn, uint256 _amountIn) internal returns (uint256, uint256) {
         uint256 balanceBeforeTransfer = IERC20Upgradeable(_tokenIn).balanceOf(address(this));
         IERC20Upgradeable(_tokenIn).safeTransferFrom(msg.sender, address(this), _amountIn);
         uint256 balanceAfterTransfer = IERC20Upgradeable(_tokenIn).balanceOf(address(this));
@@ -241,7 +241,7 @@ contract MultichainProxy is OnlySourceFunctionality {
         sendToken(_token, _amount, msg.sender);
     }
 
-    /// @dev Conatains the business logic for the bridge via Anyswap
+    /// @dev Contains the business logic for the bridge via Anyswap
     /// @param _tokenIn data specific to Anyswap
     /// @param _anyRouter data specific to Anyswap
     /// @param _amount data specific to Anyswap
