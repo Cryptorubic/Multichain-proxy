@@ -99,7 +99,6 @@ contract MultichainProxy is OnlySourceFunctionality {
             isNative
         );
 
-        // emit underlying native token
         _params.srcInputToken = address(0);
         emit RequestSent(_params, 'native:Multichain');
     }
@@ -147,6 +146,12 @@ contract MultichainProxy is OnlySourceFunctionality {
             isNative
         );
 
+        // emit underlying token token or native
+        if (isNative){
+            _params.srcInputToken = address(0);
+        } else {
+            _params.srcInputToken = underlyingToken;
+        }
         emit RequestSent(_params, 'native:Multichain');
     }
 
@@ -186,6 +191,12 @@ contract MultichainProxy is OnlySourceFunctionality {
             isNative
         );
 
+        // emit underlying token token or native
+        if (isNative){
+            _params.srcInputToken = address(0);
+        } else {
+            _params.srcInputToken = underlyingToken;
+        }
         emit RequestSent(_params, 'native:Multichain');
     }
 
