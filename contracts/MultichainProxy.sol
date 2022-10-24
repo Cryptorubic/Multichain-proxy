@@ -261,11 +261,6 @@ contract MultichainProxy is OnlySourceFunctionality {
         if (_amount <= minTokenAmount[_tokenIn]) {
             revert LessThanMinAmount();
         }
-        if (maxTokenAmount[_tokenIn] > 0) {
-            if (_amount > maxTokenAmount[_tokenIn]) {
-                revert MoreThanMaxAmount();
-            }
-        }
 
         if (!availableRouters.contains(_anyRouter)) {
             revert RouterNotAvailable();
