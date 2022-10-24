@@ -147,7 +147,7 @@ contract MultichainProxy is OnlySourceFunctionality {
         );
 
         // emit underlying token token or native
-        if (isNative){
+        if (isNative) {
             _params.srcInputToken = address(0);
         } else {
             _params.srcInputToken = underlyingToken;
@@ -173,13 +173,7 @@ contract MultichainProxy is OnlySourceFunctionality {
 
         (address underlyingToken, bool isNative) = _getUnderlyingToken(_anyTokenOut, _params.router);
 
-        uint256 amountOut = _performSwap(
-            underlyingToken,
-            _dex,
-            _swapData,
-            isNative,
-            _params.srcInputAmount
-        );
+        uint256 amountOut = _performSwap(underlyingToken, _dex, _swapData, isNative, _params.srcInputAmount);
 
         _transferToMultichain(
             _anyTokenOut,
@@ -192,7 +186,7 @@ contract MultichainProxy is OnlySourceFunctionality {
         );
 
         // emit underlying token token or native
-        if (isNative){
+        if (isNative) {
             _params.srcInputToken = address(0);
         } else {
             _params.srcInputToken = underlyingToken;
@@ -223,15 +217,16 @@ contract MultichainProxy is OnlySourceFunctionality {
         bool _isNative,
         uint256 _value
     ) internal returns (uint256) {
-        uint balanceBeforeSwap;
-        _isNative ? balanceBeforeSwap = address(this).balance : balanceBeforeSwap = IERC20Upgradeable(_tokenOut)
-            .balanceOf(address(this));
+        uint256 balanceBeforeSwap = _isNative
+            ? address(this).balance
+            : IERC20Upgradeable(_tokenOut).balanceOf(address(this));
 
         AddressUpgradeable.functionCallWithValue(_dex, _data, _value);
-        
-        return _isNative ? address(this).balance - balanceBeforeSwap : IERC20Upgradeable(_tokenOut)
-            .balanceOf(address(this)) - balanceBeforeSwap;
-        
+
+        return
+            _isNative
+                ? address(this).balance - balanceBeforeSwap
+                : IERC20Upgradeable(_tokenOut).balanceOf(address(this)) - balanceBeforeSwap;
     }
 
     function _checkAmountIn(address _tokenIn, uint256 _amountIn) internal returns (uint256, uint256) {
