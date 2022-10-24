@@ -69,8 +69,6 @@ contract MultichainProxy is OnlySourceFunctionality {
             isNative
         );
 
-        _amountAndAllowanceChecks(underlyingToken, _params.router, _params.srcInputAmount, tokenInAfter);
-
         // emit underlying token token
         _params.srcInputToken = underlyingToken;
         emit RequestSent(_params, 'native:Multichain');

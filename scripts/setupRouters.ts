@@ -20,7 +20,8 @@ async function main() {
     // await multichain.addAvailableRouters([
     //     '0xabd380327fe66724ffda91a87c772fb8d00be488',
     //     '0xe1d592c3322f1f714ca11f05b6bc0efef1907859',
-    //     '0xf9736ec3926703e85c843fc972bd89a7f8e827c0'
+    //     '0xf9736ec3926703e85c843fc972bd89a7f8e827c0',
+    //     '0xd1c5966f9f5ee6881ff6b261bbeda45972b1b5f3'
     // ]);
 
     // 2222
