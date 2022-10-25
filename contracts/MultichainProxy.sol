@@ -119,6 +119,8 @@ contract MultichainProxy is OnlySourceFunctionality {
             _params.srcInputToken
         );
 
+        accrueFixedCryptoFee(_params.integrator, _info);
+
         IERC20Upgradeable(_params.srcInputToken).safeApprove(_dex, _params.srcInputAmount);
 
         (address underlyingToken, bool isNative) = _getUnderlyingToken(_anyTokenOut, _params.router);
@@ -128,7 +130,7 @@ contract MultichainProxy is OnlySourceFunctionality {
             _dex,
             _swapData,
             isNative,
-            accrueFixedCryptoFee(_params.integrator, _info)
+            0
         );
 
         _amountAndAllowanceChecks(_params.srcInputToken, _dex, _params.srcInputAmount, tokenInAfter);
