@@ -174,7 +174,7 @@ describe('Multichain Proxy', () => {
                 );
             });
 
-            it('Check for possible hack', async () => {
+            it('Check for possible incorrect token', async () => {
                 await ercUnderlying.approve(multichain.address, ethers.constants.MaxUint256);
 
                 await expect(

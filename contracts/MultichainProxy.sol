@@ -48,7 +48,7 @@ contract MultichainProxy is OnlySourceFunctionality {
     }
 
     function multiBridge(BaseCrossChainParams memory _params) external payable nonReentrant whenNotPaused {
-        (address underlyingToken, bool isNative) = _getUnderlyingToken(_params.srcInputToken, _params.router);
+        (address underlyingToken, ) = _getUnderlyingToken(_params.srcInputToken, _params.router);
 
         (_params.srcInputAmount, ) = _receiveTokens(underlyingToken, _params.srcInputAmount);
 
@@ -65,7 +65,7 @@ contract MultichainProxy is OnlySourceFunctionality {
             _params.recipient,
             _params.dstChainID,
             underlyingToken,
-            isNative
+            false
         );
 
         // emit underlying token token
