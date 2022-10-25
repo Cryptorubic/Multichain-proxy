@@ -11,8 +11,7 @@ import './interfaces/IAnyswapToken.sol';
 error DifferentAmountSpent();
 error RouterNotAvailable();
 error CannotBridgeToSameNetwork();
-error LessThanMinAmount();
-error MoreThanMaxAmount();
+error LessOrEqualsMinAmount();
 
 contract MultichainProxy is OnlySourceFunctionality {
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
@@ -74,7 +73,7 @@ contract MultichainProxy is OnlySourceFunctionality {
     }
 
     function multiBridgeNative(BaseCrossChainParams memory _params) external payable nonReentrant whenNotPaused {
-        (address underlyingToken, bool isNative) = _getUnderlyingToken(_params.srcInputToken, _params.router);
+        (address underlyingToken, ) = _getUnderlyingToken(_params.srcInputToken, _params.router);
 
         IntegratorFeeInfo memory _info = integratorToFeeInfo[_params.integrator];
 
@@ -93,7 +92,7 @@ contract MultichainProxy is OnlySourceFunctionality {
             _params.recipient,
             _params.dstChainID,
             underlyingToken,
-            isNative
+            true
         );
 
         _params.srcInputToken = address(0);
@@ -193,13 +192,21 @@ contract MultichainProxy is OnlySourceFunctionality {
         emit RequestSent(_params, 'native:Multichain');
     }
 
+    /// @dev It's safe to approve multichain on max amount, no need to check allowance there
+    /// @dev For multichain calls we use on-chain received amount, different amount spent can not happen
+    /// @notice Use this function only after external calls with bytes data
+    /// @param _tokenIn token that we swapped on dex and approved
+    /// @param _router the dex address
+    /// @param _amountIn amount we received on the contract
+    /// @param _tokenInAfter amount of _tokenIn after swap
     function _amountAndAllowanceChecks(
         address _tokenIn,
         address _router,
         uint256 _amountIn,
-        uint256 tokenInAfter
+        uint256 _tokenInAfter
     ) internal {
-        if (tokenInAfter - IERC20Upgradeable(_tokenIn).balanceOf(address(this)) != _amountIn) {
+        // check for UTXO
+        if (_tokenInAfter - IERC20Upgradeable(_tokenIn).balanceOf(address(this)) != _amountIn) {
             revert DifferentAmountSpent();
         }
 
@@ -264,7 +271,7 @@ contract MultichainProxy is OnlySourceFunctionality {
         // initial min amount is 0
         // revert in case we received 0 tokens after swap
         if (_amount <= minTokenAmount[_tokenIn]) {
-            revert LessThanMinAmount();
+            revert LessOrEqualsMinAmount();
         }
 
         if (!availableRouters.contains(_anyRouter)) {
