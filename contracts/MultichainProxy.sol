@@ -306,7 +306,7 @@ contract MultichainProxy is OnlySourceFunctionality {
         // The native token does not use the standard null address
         isNative = IAnyswapRouter(router).wNATIVE() == underlyingToken;
         // Some Multichain complying tokens may wrap nothing
-        if (!isNative && underlyingToken == address(0)) {
+        if (underlyingToken == address(0)) {
             underlyingToken = token;
         }
     }
