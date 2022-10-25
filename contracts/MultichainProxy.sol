@@ -46,12 +46,6 @@ contract MultichainProxy is OnlySourceFunctionality {
             _maxTokenAmounts
         );
     }
-//     Вызываю функу multiBridge
-// 1) Сделаю токен который возвращает на андерлаинг адрес натива
-// 2) Контракт подумает что это натив
-// 3) При этом я на контракт натив не присылал. Он сделает receiveTokens.
-// 4) Поскольку токен самописный я перепишу функции трансфер и баланс оф так чтобы инпут был тем который мне надо.
-// 5) Далее происходит _transferToMultichain с isNative true и с контракта снимается вся нативка що там была хотя я ничо не слал
 
     function multiBridge(BaseCrossChainParams memory _params) external payable nonReentrant whenNotPaused {
         (address underlyingToken, bool isNative) = _getUnderlyingToken(_params.srcInputToken, _params.router);
@@ -222,6 +216,10 @@ contract MultichainProxy is OnlySourceFunctionality {
         bool _isNative,
         uint256 _value
     ) internal returns (uint256) {
+        if (!availableRouters.contains(_dex)) {
+            revert RouterNotAvailable();
+        }
+
         uint256 balanceBeforeSwap = _isNative
             ? address(this).balance
             : IERC20Upgradeable(_tokenOut).balanceOf(address(this));

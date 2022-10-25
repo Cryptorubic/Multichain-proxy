@@ -19,7 +19,6 @@ import {
 } from './shared/consts';
 import { BigNumber as BN, BytesLike, ContractTransaction } from 'ethers';
 import { calcCryptoFees, calcTokenFees } from './shared/utils';
-import { makeUpgradeBeacon } from '@openzeppelin/hardhat-upgrades/dist/upgrade-beacon';
 
 const createFixtureLoader = waffle.createFixtureLoader;
 
