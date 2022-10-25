@@ -50,14 +50,13 @@ contract MultichainProxy is OnlySourceFunctionality {
     function multiBridge(BaseCrossChainParams memory _params) external payable nonReentrant whenNotPaused {
         (address underlyingToken, bool isNative) = _getUnderlyingToken(_params.srcInputToken, _params.router);
 
-        uint256 tokenInAfter;
-        (_params.srcInputAmount, tokenInAfter) = _receiveTokens(underlyingToken, _params.srcInputAmount);
+        (_params.srcInputAmount, ) = _receiveTokens(underlyingToken, _params.srcInputAmount);
 
         IntegratorFeeInfo memory _info = integratorToFeeInfo[_params.integrator];
 
         _params.srcInputAmount = accrueTokenFees(_params.integrator, _info, _params.srcInputAmount, 0, underlyingToken);
 
-        accrueFixedCryptoFee(_params.integrator, _info); // add require msg.value left == 0 ?
+        accrueFixedCryptoFee(_params.integrator, _info);
 
         _transferToMultichain(
             _params.srcInputToken,
