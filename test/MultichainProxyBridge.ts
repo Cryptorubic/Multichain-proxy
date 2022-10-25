@@ -519,7 +519,6 @@ describe('Multichain Proxy', () => {
             beforeEach('prepare before sweeps', async () => {
                 await transitToken.transfer(multichain.address, ethers.utils.parseEther('1'));
                 await swapToken.transfer(multichain.address, ethers.utils.parseEther('1'));
-                await wnative.transfer(multichain.address, ethers.utils.parseEther('1'));
             });
 
             it('owner should sweep tokens', async () => {
