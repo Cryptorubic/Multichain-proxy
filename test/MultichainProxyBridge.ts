@@ -273,8 +273,6 @@ describe('Multichain Proxy', () => {
                     multichain.address
                 );
 
-                let balanceBefore = await wnative.balanceOf(ANY_NATIVE_POLY);
-
                 await expect(
                     callBridge(swapData, { dstOutputToken: TRANSIT_ANY_TOKEN }, DEFAULT_AMOUNT_IN)
                 ).to.emit(multichain, 'RequestSent');
@@ -286,18 +284,9 @@ describe('Multichain Proxy', () => {
                 expect(
                     await multichain.availableRubicTokenFee(ethers.constants.AddressZero)
                 ).to.be.eq(feeAmount, 'wrong Rubic fees collected');
-                console.log(feeAmount);
-                console.log(totalCryptoFee);
-                expect(
-                    balanceBefore
-                        .add(DEFAULT_AMOUNT_IN)
-                        .sub(feeAmount)
-                        .sub(totalCryptoFee) // TODO fixed fee is not accumulated
-                        .toString()
-                ).to.be.eq((await wnative.balanceOf(ANY_NATIVE_POLY)).toString());
             });
 
-            it('Should swap native token and transfer to AnyRouter with integrator', async () => {
+            it('Should swap native token for token and transfer to AnyRouter with integrator', async () => {
                 await multichain.setIntegratorInfo(integratorWallet.address, {
                     isIntegrator: true,
                     tokenFee: '60000', // 6%
@@ -320,8 +309,6 @@ describe('Multichain Proxy', () => {
                     [NATIVE_POLY, transitToken.address],
                     multichain.address
                 );
-
-                let balanceBefore = await wnative.balanceOf(ANY_NATIVE_POLY);
 
                 await expect(
                     callBridge(
@@ -349,16 +336,6 @@ describe('Multichain Proxy', () => {
                 expect(
                     await multichain.availableRubicTokenFee(ethers.constants.AddressZero)
                 ).to.be.eq(RubicFee, 'wrong Rubic fees collected');
-                console.log(totalCryptoFee);
-                console.log(feeAmount);
-                console.log(balanceBefore);
-                expect(
-                    balanceBefore
-                        .add(DEFAULT_AMOUNT_IN)
-                        .sub(feeAmount) // ???
-                        .sub(totalCryptoFee)
-                        .toString()
-                ).to.be.eq((await wnative.balanceOf(ANY_NATIVE_POLY)).toString());
             });
         });
 
