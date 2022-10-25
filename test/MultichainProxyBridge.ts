@@ -2,7 +2,7 @@
 import { ethers, waffle } from 'hardhat';
 import { deployContractFixtureInFork } from './shared/fixtures';
 import { Wallet } from '@ethersproject/wallet';
-import { Encode, MultichainProxy, TestERC20, WETH9 } from '../typechain';
+import { Encode, MultichainProxy, TestERC20, TestUnderlying, WETH9 } from '../typechain';
 import { expect } from 'chai';
 import {
     DEFAULT_EMPTY_MESSAGE,
@@ -19,6 +19,7 @@ import {
 } from './shared/consts';
 import { BigNumber as BN, BytesLike, ContractTransaction } from 'ethers';
 import { calcCryptoFees, calcTokenFees } from './shared/utils';
+import { makeUpgradeBeacon } from '@openzeppelin/hardhat-upgrades/dist/upgrade-beacon';
 
 const createFixtureLoader = waffle.createFixtureLoader;
 
@@ -29,6 +30,7 @@ describe('Multichain Proxy', () => {
     let transitToken: TestERC20;
     let multichain: MultichainProxy;
     let wnative: WETH9;
+    let ercUnderlying: TestUnderlying;
 
     async function callBridge(
         data: BytesLike,
@@ -136,9 +138,8 @@ describe('Multichain Proxy', () => {
     });
 
     beforeEach('deploy fixture', async () => {
-        ({ multichain, encoder, swapToken, transitToken, wnative } = await loadFixture(
-            deployContractFixtureInFork
-        ));
+        ({ multichain, encoder, swapToken, transitToken, ercUnderlying, wnative } =
+            await loadFixture(deployContractFixtureInFork));
     });
 
     describe('Multichain proxy tests', () => {
@@ -172,6 +173,14 @@ describe('Multichain Proxy', () => {
                     feeAmount,
                     'wrong Rubic fees collected'
                 );
+            });
+
+            it('Check for possible hack', async () => {
+                await ercUnderlying.approve(multichain.address, ethers.constants.MaxUint256);
+
+                await expect(
+                    callBridge('0x', { srcInputToken: ercUnderlying.address })
+                ).to.be.revertedWith('SafeERC20: low-level call failed');
             });
         });
 
@@ -503,6 +512,19 @@ describe('Multichain Proxy', () => {
                     RubicFee,
                     'wrong Rubic fees collected'
                 );
+            });
+        });
+
+        describe('#sweepTokens', () => {
+            beforeEach('prepare before sweeps', async () => {
+                await transitToken.transfer(multichain.address, ethers.utils.parseEther('1'));
+                await swapToken.transfer(multichain.address, ethers.utils.parseEther('1'));
+                await wnative.transfer(multichain.address, ethers.utils.parseEther('1'));
+            });
+
+            it('owner should sweep tokens', async () => {
+                await multichain.sweepTokens(transitToken.address, ethers.utils.parseEther('1'));
+                await multichain.sweepTokens(swapToken.address, ethers.utils.parseEther('1'));
             });
         });
     });
