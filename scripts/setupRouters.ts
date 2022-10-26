@@ -9,7 +9,7 @@ async function main() {
     const ERCFactory = await ethers.getContractFactory('TestERC20');
 
     // let token = (await ERCFactory.attach(
-    //     '0xfA9343C3897324496A05fC75abeD6bAC29f8A40f'
+    //     ''
     // )) as TestERC20;
 
     let multichain = (await MultichainProxyFactory.attach(
@@ -22,6 +22,12 @@ async function main() {
     //     '0xe1d592c3322f1f714ca11f05b6bc0efef1907859',
     //     '0xf9736ec3926703e85c843fc972bd89a7f8e827c0',
     //     '0xd1c5966f9f5ee6881ff6b261bbeda45972b1b5f3'
+    // ]);
+
+    // // 137
+    // await multichain.addAvailableRouters([
+    //     '0x4f3aff3a747fcade12598081e80c6605a8be192f',
+    //     '0x84cebca6bd17fe11f7864f7003a1a30f2852b1dc'
     // ]);
 
     // 2222

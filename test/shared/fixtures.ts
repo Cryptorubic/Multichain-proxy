@@ -50,6 +50,7 @@ export const deployContractFixtureInFork: Fixture<DeployContractFixture> = async
     const MultichainProxyFactory = await ethers.getContractFactory('MultichainProxy');
 
     const multichain = (await MultichainProxyFactory.deploy(
+        NATIVE_POLY,
         FIXED_CRYPTO_FEE,
         RUBIC_PLATFORM_FEE,
         [DEX, ANY_ROUTER_POLY],
