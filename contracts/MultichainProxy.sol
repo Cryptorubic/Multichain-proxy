@@ -146,6 +146,8 @@ contract MultichainProxy is OnlySourceFunctionality {
         _checkParamsBeforeBridge(_params.router, underlyingToken, amountOut, _params.dstChainID);
 
         if (isNative) {
+            _bridgeNative(_anyTokenOut, _params.router, amountOut, _params.recipient, _params.dstChainID);
+        } else {
             _bridgeTokens(
                 _anyTokenOut,
                 _params.router,
@@ -154,8 +156,6 @@ contract MultichainProxy is OnlySourceFunctionality {
                 _params.dstChainID,
                 underlyingToken
             );
-        } else {
-            _bridgeNative(_anyTokenOut, _params.router, amountOut, _params.recipient, _params.dstChainID);
         }
 
         // emit underlying token token or native

@@ -15,7 +15,8 @@ import {
     NATIVE_POLY,
     ANY_NATIVE_POLY,
     DEFAULT_AMOUNT_MIN,
-    FIXED_CRYPTO_FEE
+    FIXED_CRYPTO_FEE,
+    TRANSIT_TOKEN
 } from './shared/consts';
 import { BigNumber as BN, BytesLike, ContractTransaction } from 'ethers';
 import { calcCryptoFees, calcTokenFees } from './shared/utils';
@@ -283,6 +284,11 @@ describe('Multichain Proxy', () => {
 
                 await expect(
                     callBridge(swapData, { dstOutputToken: TRANSIT_ANY_TOKEN }, DEFAULT_AMOUNT_IN)
+                ).to.be.revertedWith('LessOrEqualsMinAmount()');
+                await multichain.setMinTokenAmount(transitToken.address, 0);
+
+                await expect(
+                    callBridge(swapData, { dstOutputToken: TRANSIT_ANY_TOKEN }, DEFAULT_AMOUNT_IN)
                 ).to.emit(multichain, 'RequestSent');
 
                 expect(await waffle.provider.getBalance(multichain.address)).to.be.eq(
@@ -317,6 +323,15 @@ describe('Multichain Proxy', () => {
                     [NATIVE_POLY, transitToken.address],
                     multichain.address
                 );
+
+                await expect(
+                    callBridge(
+                        swapData,
+                        { dstOutputToken: TRANSIT_ANY_TOKEN, integrator: integratorWallet.address },
+                        DEFAULT_AMOUNT_IN
+                    )
+                ).to.be.revertedWith('LessOrEqualsMinAmount()');
+                await multichain.setMinTokenAmount(transitToken.address, 0);
 
                 await expect(
                     callBridge(
@@ -373,6 +388,13 @@ describe('Multichain Proxy', () => {
                         srcInputToken: swapToken.address,
                         dstOutputToken: TRANSIT_ANY_TOKEN
                     })
+                ).to.be.revertedWith('LessOrEqualsMinAmount()');
+                await multichain.setMinTokenAmount(transitToken.address, 0);
+                await expect(
+                    callBridge(swapData, {
+                        srcInputToken: swapToken.address,
+                        dstOutputToken: TRANSIT_ANY_TOKEN
+                    })
                 ).to.emit(multichain, 'RequestSent');
                 expect(await waffle.provider.getBalance(multichain.address)).to.be.eq(
                     totalCryptoFee,
@@ -415,8 +437,15 @@ describe('Multichain Proxy', () => {
                         dstOutputToken: TRANSIT_ANY_TOKEN,
                         integrator: integratorWallet.address
                     })
+                ).to.be.revertedWith('LessOrEqualsMinAmount()');
+                await multichain.setMinTokenAmount(transitToken.address, 0);
+                await expect(
+                    callBridge(swapData, {
+                        srcInputToken: swapToken.address,
+                        dstOutputToken: TRANSIT_ANY_TOKEN,
+                        integrator: integratorWallet.address
+                    })
                 ).to.emit(multichain, 'RequestSent');
-
                 expect(
                     await multichain.availableIntegratorTokenFee(
                         swapToken.address,
