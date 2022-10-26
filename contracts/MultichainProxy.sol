@@ -164,6 +164,7 @@ contract MultichainProxy is OnlySourceFunctionality {
         } else {
             _params.srcInputToken = underlyingToken;
         }
+        _params.srcInputAmount = amountOut;
         emit RequestSent(_params, 'native:Multichain');
     }
 
@@ -197,6 +198,7 @@ contract MultichainProxy is OnlySourceFunctionality {
         } else {
             _params.srcInputToken = underlyingToken;
         }
+        _params.srcInputAmount = amountOut;
         emit RequestSent(_params, 'native:Multichain');
     }
 

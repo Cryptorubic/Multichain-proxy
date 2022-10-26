@@ -213,6 +213,20 @@ describe('Multichain Proxy', () => {
                 );
             });
 
+            it('Should revert if less then min amount', async () => {
+                await multichain.setMaxTokenAmount(
+                    wnative.address,
+                    ethers.utils.parseEther('10000000000')
+                );
+                await multichain.setMinTokenAmount(
+                    wnative.address,
+                    ethers.utils.parseEther('1000')
+                );
+                await expect(
+                    callBridge('0x', { srcInputToken: ANY_NATIVE_POLY }, DEFAULT_AMOUNT_IN)
+                ).to.be.revertedWith('LessOrEqualsMinAmount()');
+            });
+
             it('Should transfer native token to AnyRouter with integrator', async () => {
                 await multichain.setIntegratorInfo(integratorWallet.address, {
                     isIntegrator: true,
