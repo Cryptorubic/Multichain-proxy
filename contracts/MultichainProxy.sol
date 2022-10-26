@@ -133,7 +133,9 @@ contract MultichainProxy is OnlySourceFunctionality {
             _params.srcInputToken
         );
 
-        accrueFixedCryptoFee(_params.integrator, _info);
+        if (accrueFixedCryptoFee(_params.integrator, _info) != 0) {
+            revert TooMuchValue();
+        }
 
         IERC20Upgradeable(_params.srcInputToken).safeApprove(_dex, _params.srcInputAmount);
 
