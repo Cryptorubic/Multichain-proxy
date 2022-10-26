@@ -186,9 +186,9 @@ contract MultichainProxy is OnlySourceFunctionality {
             address(0)
         );
 
-        (address underlyingToken, bool isNative) = _getUnderlyingToken(_anyTokenOut);
+        (address underlyingToken, ) = _getUnderlyingToken(_anyTokenOut);
 
-        uint256 amountOut = _performSwap(underlyingToken, _dex, _swapData, isNative, _params.srcInputAmount);
+        uint256 amountOut = _performSwap(underlyingToken, _dex, _swapData, false, _params.srcInputAmount);
 
         _checkParamsBeforeBridge(_params.router, underlyingToken, amountOut, _params.dstChainID);
 
