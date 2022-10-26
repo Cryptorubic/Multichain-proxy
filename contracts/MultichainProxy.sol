@@ -9,6 +9,7 @@ import './interfaces/IAnyswapRouter.sol';
 import './interfaces/IAnyswapToken.sol';
 
 error DifferentAmountSpent();
+error TooMuchValue();
 error RouterNotAvailable();
 error CannotBridgeToSameNetwork();
 error LessOrEqualsMinAmount();
@@ -52,7 +53,7 @@ contract MultichainProxy is OnlySourceFunctionality {
     }
 
     function multiBridge(BaseCrossChainParams memory _params) external payable nonReentrant whenNotPaused {
-        (address underlyingToken, ) = _getUnderlyingToken(_params.srcInputToken, _params.router);
+        (address underlyingToken, ) = _getUnderlyingToken(_params.srcInputToken);
 
         (_params.srcInputAmount, ) = _receiveTokens(underlyingToken, _params.srcInputAmount);
 
@@ -61,7 +62,7 @@ contract MultichainProxy is OnlySourceFunctionality {
         _params.srcInputAmount = accrueTokenFees(_params.integrator, _info, _params.srcInputAmount, 0, underlyingToken);
 
         if (accrueFixedCryptoFee(_params.integrator, _info) != 0) {
-            revert DifferentAmountSpent();
+            revert TooMuchValue();
         }
 
         _checkParamsBeforeBridge(_params.router, underlyingToken, _params.srcInputAmount, _params.dstChainID);
@@ -81,7 +82,7 @@ contract MultichainProxy is OnlySourceFunctionality {
     }
 
     function multiBridgeNative(BaseCrossChainParams memory _params) external payable nonReentrant whenNotPaused {
-        (address underlyingToken, ) = _getUnderlyingToken(_params.srcInputToken, _params.router);
+        (address underlyingToken, ) = _getUnderlyingToken(_params.srcInputToken);
         // check if we use correct any native to prevent calling Anyswap with incorrect token
         // if the any token is incorrect -> tokens won't arrive in dst chain
         if (underlyingToken != nativeWrap) {
@@ -98,6 +99,8 @@ contract MultichainProxy is OnlySourceFunctionality {
             0,
             address(0)
         );
+
+        _checkParamsBeforeBridge(_params.router, underlyingToken, _params.srcInputAmount, _params.dstChainID);
 
         _bridgeNative(
             _params.srcInputToken,
@@ -134,21 +137,15 @@ contract MultichainProxy is OnlySourceFunctionality {
 
         IERC20Upgradeable(_params.srcInputToken).safeApprove(_dex, _params.srcInputAmount);
 
-        (address underlyingToken, bool isNative) = _getUnderlyingToken(_anyTokenOut, _params.router);
+        (address underlyingToken, bool isNative) = _getUnderlyingToken(_anyTokenOut);
 
         uint256 amountOut = _performSwap(underlyingToken, _dex, _swapData, isNative, 0);
 
         _amountAndAllowanceChecks(_params.srcInputToken, _dex, _params.srcInputAmount, tokenInAfter);
 
+        _checkParamsBeforeBridge(_params.router, underlyingToken, amountOut, _params.dstChainID);
+
         if (isNative) {
-            _bridgeNative(
-                _anyTokenOut,
-                _params.router,
-                amountOut,
-                _params.recipient,
-                _params.dstChainID
-            ); 
-        } else {
             _bridgeTokens(
                 _anyTokenOut,
                 _params.router,
@@ -157,6 +154,8 @@ contract MultichainProxy is OnlySourceFunctionality {
                 _params.dstChainID,
                 underlyingToken
             );
+        } else {
+            _bridgeNative(_anyTokenOut, _params.router, amountOut, _params.recipient, _params.dstChainID);
         }
 
         // emit underlying token token or native
@@ -184,28 +183,13 @@ contract MultichainProxy is OnlySourceFunctionality {
             address(0)
         );
 
-        (address underlyingToken, bool isNative) = _getUnderlyingToken(_anyTokenOut, _params.router);
+        (address underlyingToken, bool isNative) = _getUnderlyingToken(_anyTokenOut);
 
         uint256 amountOut = _performSwap(underlyingToken, _dex, _swapData, isNative, _params.srcInputAmount);
 
-        if (isNative) {
-            _bridgeNative(
-                _anyTokenOut,
-                _params.router,
-                amountOut,
-                _params.recipient,
-                _params.dstChainID
-            ); 
-        } else {
-            _bridgeTokens(
-                _anyTokenOut,
-                _params.router,
-                amountOut,
-                _params.recipient,
-                _params.dstChainID,
-                underlyingToken
-            );
-        }
+        _checkParamsBeforeBridge(_params.router, underlyingToken, amountOut, _params.dstChainID);
+
+        _bridgeTokens(_anyTokenOut, _params.router, amountOut, _params.recipient, _params.dstChainID, underlyingToken);
 
         // emit underlying token token or native
         if (isNative) {
@@ -336,11 +320,7 @@ contract MultichainProxy is OnlySourceFunctionality {
 
     /// @dev Unwraps the underlying token from the Anyswap token if necessary
     /// @param token The (maybe) wrapped token
-    /// @param router The Anyswap router
-    function _getUnderlyingToken(address token, address router)
-        private
-        returns (address underlyingToken, bool isNative)
-    {
+    function _getUnderlyingToken(address token) private returns (address underlyingToken, bool isNative) {
         // Token must implement IAnyswapToken interface
         if (token == address(0)) revert ZeroAddress();
         underlyingToken = IAnyswapToken(token).underlying();
