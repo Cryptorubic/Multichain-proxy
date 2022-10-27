@@ -212,6 +212,13 @@ module.exports = {
             live: true,
             saveDeployments: true,
             accounts: [`0x${DEFAULT_PRIVATE_KEY}`]
+        },
+        bitgert: {
+            url: 'https://rpc.icecreamswap.com',
+            chainId: 32520,
+            live: true,
+            saveDeployments: true,
+            accounts: [`0x${DEFAULT_PRIVATE_KEY}`]
         }
     },
     etherscan: {
