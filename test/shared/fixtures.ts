@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-magic-numbers */
 import { Fixture } from 'ethereum-waffle';
 import { ethers, network } from 'hardhat';
-import { MultichainProxy, TestERC20, WETH9, Encode } from '../../typechain';
+import { MultichainProxy, TestERC20, WETH9, Encode, TestUnderlying } from '../../typechain';
 import WETHJSON from '../../artifacts/contracts/test/WETH9.sol/WETH9.json';
 import {
     RUBIC_PLATFORM_FEE,
@@ -21,6 +21,7 @@ interface DeployContractFixture {
     encoder: Encode;
     swapToken: TestERC20;
     transitToken: TestERC20;
+    ercUnderlying: TestUnderlying;
     wnative: WETH9;
 }
 
@@ -35,6 +36,10 @@ export const deployContractFixtureInFork: Fixture<DeployContractFixture> = async
     let transitToken = transitTokenFactory.attach(TRANSIT_TOKEN) as TestERC20;
     transitToken = transitToken.connect(wallets[0]);
 
+    const underlyingTokenFactory = await ethers.getContractFactory('TestUnderlying');
+    let ercUnderlying = (await underlyingTokenFactory.deploy()) as TestUnderlying;
+    ercUnderlying = ercUnderlying.connect(wallets[0]);
+
     const wnativeFactory = ethers.ContractFactory.fromSolidity(WETHJSON);
     let wnative = wnativeFactory.attach(NATIVE_POLY) as WETH9;
     wnative = wnative.connect(wallets[0]);
@@ -45,6 +50,7 @@ export const deployContractFixtureInFork: Fixture<DeployContractFixture> = async
     const MultichainProxyFactory = await ethers.getContractFactory('MultichainProxy');
 
     const multichain = (await MultichainProxyFactory.deploy(
+        NATIVE_POLY,
         FIXED_CRYPTO_FEE,
         RUBIC_PLATFORM_FEE,
         [DEX, ANY_ROUTER_POLY],
@@ -89,6 +95,7 @@ export const deployContractFixtureInFork: Fixture<DeployContractFixture> = async
         encoder,
         swapToken,
         transitToken,
+        ercUnderlying,
         wnative
     };
 };

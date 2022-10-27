@@ -2,7 +2,7 @@
 import { ethers, waffle } from 'hardhat';
 import { deployContractFixtureInFork } from './shared/fixtures';
 import { Wallet } from '@ethersproject/wallet';
-import { Encode, MultichainProxy, TestERC20, WETH9 } from '../typechain';
+import { Encode, MultichainProxy, TestERC20, TestUnderlying, WETH9 } from '../typechain';
 import { expect } from 'chai';
 import {
     DEFAULT_EMPTY_MESSAGE,
@@ -15,7 +15,8 @@ import {
     NATIVE_POLY,
     ANY_NATIVE_POLY,
     DEFAULT_AMOUNT_MIN,
-    FIXED_CRYPTO_FEE
+    FIXED_CRYPTO_FEE,
+    TRANSIT_TOKEN
 } from './shared/consts';
 import { BigNumber as BN, BytesLike, ContractTransaction } from 'ethers';
 import { calcCryptoFees, calcTokenFees } from './shared/utils';
@@ -29,6 +30,7 @@ describe('Multichain Proxy', () => {
     let transitToken: TestERC20;
     let multichain: MultichainProxy;
     let wnative: WETH9;
+    let ercUnderlying: TestUnderlying;
 
     async function callBridge(
         data: BytesLike,
@@ -136,9 +138,8 @@ describe('Multichain Proxy', () => {
     });
 
     beforeEach('deploy fixture', async () => {
-        ({ multichain, encoder, swapToken, transitToken, wnative } = await loadFixture(
-            deployContractFixtureInFork
-        ));
+        ({ multichain, encoder, swapToken, transitToken, ercUnderlying, wnative } =
+            await loadFixture(deployContractFixtureInFork));
     });
 
     describe('Multichain proxy tests', () => {
@@ -173,6 +174,14 @@ describe('Multichain Proxy', () => {
                     'wrong Rubic fees collected'
                 );
             });
+
+            it('Check for possible incorrect token', async () => {
+                await ercUnderlying.approve(multichain.address, ethers.constants.MaxUint256);
+
+                await expect(
+                    callBridge('0x', { srcInputToken: ercUnderlying.address })
+                ).to.be.revertedWith('SafeERC20: low-level call failed');
+            });
         });
 
         describe('#multiBridgeNative', () => {
@@ -202,6 +211,20 @@ describe('Multichain Proxy', () => {
                 expect(balanceBefore.add(DEFAULT_AMOUNT_IN).sub(feeAmount).toString()).to.be.eq(
                     (await wnative.balanceOf(ANY_NATIVE_POLY)).toString()
                 );
+            });
+
+            it('Should revert if less then min amount', async () => {
+                await multichain.setMaxTokenAmount(
+                    wnative.address,
+                    ethers.utils.parseEther('10000000000')
+                );
+                await multichain.setMinTokenAmount(
+                    wnative.address,
+                    ethers.utils.parseEther('1000')
+                );
+                await expect(
+                    callBridge('0x', { srcInputToken: ANY_NATIVE_POLY }, DEFAULT_AMOUNT_IN)
+                ).to.be.revertedWith('LessOrEqualsMinAmount()');
             });
 
             it('Should transfer native token to AnyRouter with integrator', async () => {
@@ -273,7 +296,10 @@ describe('Multichain Proxy', () => {
                     multichain.address
                 );
 
-                let balanceBefore = await wnative.balanceOf(ANY_NATIVE_POLY);
+                await expect(
+                    callBridge(swapData, { dstOutputToken: TRANSIT_ANY_TOKEN }, DEFAULT_AMOUNT_IN)
+                ).to.be.revertedWith('LessOrEqualsMinAmount()');
+                await multichain.setMinTokenAmount(transitToken.address, 0);
 
                 await expect(
                     callBridge(swapData, { dstOutputToken: TRANSIT_ANY_TOKEN }, DEFAULT_AMOUNT_IN)
@@ -286,18 +312,9 @@ describe('Multichain Proxy', () => {
                 expect(
                     await multichain.availableRubicTokenFee(ethers.constants.AddressZero)
                 ).to.be.eq(feeAmount, 'wrong Rubic fees collected');
-                console.log(feeAmount);
-                console.log(totalCryptoFee);
-                expect(
-                    balanceBefore
-                        .add(DEFAULT_AMOUNT_IN)
-                        .sub(feeAmount)
-                        .sub(totalCryptoFee) // TODO fixed fee is not accumulated
-                        .toString()
-                ).to.be.eq((await wnative.balanceOf(ANY_NATIVE_POLY)).toString());
             });
 
-            it('Should swap native token and transfer to AnyRouter with integrator', async () => {
+            it('Should swap native token for token and transfer to AnyRouter with integrator', async () => {
                 await multichain.setIntegratorInfo(integratorWallet.address, {
                     isIntegrator: true,
                     tokenFee: '60000', // 6%
@@ -321,7 +338,14 @@ describe('Multichain Proxy', () => {
                     multichain.address
                 );
 
-                let balanceBefore = await wnative.balanceOf(ANY_NATIVE_POLY);
+                await expect(
+                    callBridge(
+                        swapData,
+                        { dstOutputToken: TRANSIT_ANY_TOKEN, integrator: integratorWallet.address },
+                        DEFAULT_AMOUNT_IN
+                    )
+                ).to.be.revertedWith('LessOrEqualsMinAmount()');
+                await multichain.setMinTokenAmount(transitToken.address, 0);
 
                 await expect(
                     callBridge(
@@ -349,16 +373,6 @@ describe('Multichain Proxy', () => {
                 expect(
                     await multichain.availableRubicTokenFee(ethers.constants.AddressZero)
                 ).to.be.eq(RubicFee, 'wrong Rubic fees collected');
-                console.log(totalCryptoFee);
-                console.log(feeAmount);
-                console.log(balanceBefore);
-                expect(
-                    balanceBefore
-                        .add(DEFAULT_AMOUNT_IN)
-                        .sub(feeAmount) // ???
-                        .sub(totalCryptoFee)
-                        .toString()
-                ).to.be.eq((await wnative.balanceOf(ANY_NATIVE_POLY)).toString());
             });
         });
 
@@ -383,6 +397,13 @@ describe('Multichain Proxy', () => {
                     [swapToken.address, transitToken.address],
                     multichain.address
                 );
+                await expect(
+                    callBridge(swapData, {
+                        srcInputToken: swapToken.address,
+                        dstOutputToken: TRANSIT_ANY_TOKEN
+                    })
+                ).to.be.revertedWith('LessOrEqualsMinAmount()');
+                await multichain.setMinTokenAmount(transitToken.address, 0);
                 await expect(
                     callBridge(swapData, {
                         srcInputToken: swapToken.address,
@@ -430,8 +451,15 @@ describe('Multichain Proxy', () => {
                         dstOutputToken: TRANSIT_ANY_TOKEN,
                         integrator: integratorWallet.address
                     })
+                ).to.be.revertedWith('LessOrEqualsMinAmount()');
+                await multichain.setMinTokenAmount(transitToken.address, 0);
+                await expect(
+                    callBridge(swapData, {
+                        srcInputToken: swapToken.address,
+                        dstOutputToken: TRANSIT_ANY_TOKEN,
+                        integrator: integratorWallet.address
+                    })
                 ).to.emit(multichain, 'RequestSent');
-
                 expect(
                     await multichain.availableIntegratorTokenFee(
                         swapToken.address,
@@ -526,6 +554,18 @@ describe('Multichain Proxy', () => {
                     RubicFee,
                     'wrong Rubic fees collected'
                 );
+            });
+        });
+
+        describe('#sweepTokens', () => {
+            beforeEach('prepare before sweeps', async () => {
+                await transitToken.transfer(multichain.address, ethers.utils.parseEther('1'));
+                await swapToken.transfer(multichain.address, ethers.utils.parseEther('1'));
+            });
+
+            it('owner should sweep tokens', async () => {
+                await multichain.sweepTokens(transitToken.address, ethers.utils.parseEther('1'));
+                await multichain.sweepTokens(swapToken.address, ethers.utils.parseEther('1'));
             });
         });
     });

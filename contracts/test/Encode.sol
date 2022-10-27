@@ -35,7 +35,14 @@ contract Encode {
         address[] calldata path,
         address to
     ) external pure returns (bytes memory) {
-        bytes memory data = abi.encodeWithSelector(FUNC_SELECTOR_FOR_NATIVE, amountIn, amountOutMin, path, to, type(uint256).max);
+        bytes memory data = abi.encodeWithSelector(
+            FUNC_SELECTOR_FOR_NATIVE,
+            amountIn,
+            amountOutMin,
+            path,
+            to,
+            type(uint256).max
+        );
         return data;
     }
 }
