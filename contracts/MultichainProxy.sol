@@ -11,6 +11,7 @@ import './interfaces/IAnyswapToken.sol';
 error DifferentAmountSpent();
 error TooMuchValue();
 error RouterNotAvailable();
+error DexNotAvailable();
 error CannotBridgeToSameNetwork();
 error LessOrEqualsMinAmount();
 error IncorrectAnyNative();
@@ -232,7 +233,7 @@ contract MultichainProxy is OnlySourceFunctionality {
         uint256 _value
     ) internal returns (uint256) {
         if (!availableRouters.contains(_dex)) {
-            revert RouterNotAvailable();
+            revert DexNotAvailable();
         }
 
         uint256 balanceBeforeSwap = _isNative
