@@ -5,6 +5,7 @@ pragma solidity ^0.8.10;
 import 'rubic-bridge-base/contracts/architecture/OnlySourceFunctionality.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 import 'rubic-bridge-base/contracts/errors/Errors.sol';
+import 'rubic-bridge-base/contracts/libraries/SmartApprove.sol';
 import './interfaces/IAnyswapRouter.sol';
 import './interfaces/IAnyswapToken.sol';
 
@@ -22,16 +23,21 @@ contract MultichainProxy is OnlySourceFunctionality {
 
     address public immutable nativeWrap;
 
+    // AddressSet of whitelisted AnyRouters
+    EnumerableSetUpgradeable.AddressSet internal availableAnyRouters;
+
     constructor(
         address _nativeWrap,
         uint256 _fixedCryptoFee,
         uint256 _rubicPlatformFee,
         address[] memory _routers,
+        address[] memory _anyRouters,
         address[] memory _tokens,
         uint256[] memory _minTokenAmounts,
         uint256[] memory _maxTokenAmounts
     ) {
         nativeWrap = _nativeWrap;
+        addAvailableAnyRouters(_anyRouters);
         initialize(_fixedCryptoFee, _rubicPlatformFee, _routers, _tokens, _minTokenAmounts, _maxTokenAmounts);
     }
 
@@ -276,7 +282,7 @@ contract MultichainProxy is OnlySourceFunctionality {
         address _underlyingToken
     ) private {
         // Give Anyswap approval to bridge tokens
-        IERC20Upgradeable(_underlyingToken).safeApprove(_anyRouter, _amount);
+        SmartApprove.smartApprove(_underlyingToken, _amount, _anyRouter);
         // Was the token wrapping another token?
         if (_anyTokenIn != _underlyingToken) {
             IAnyswapRouter(_anyRouter).anySwapOutUnderlying(_anyTokenIn, _recipient, _amount, _dstChain);
@@ -313,7 +319,7 @@ contract MultichainProxy is OnlySourceFunctionality {
             revert LessOrEqualsMinAmount();
         }
 
-        if (!availableRouters.contains(_anyRouter)) {
+        if (!availableAnyRouters.contains(_anyRouter)) {
             revert RouterNotAvailable();
         }
         if (block.chainid == _dstChain) revert CannotBridgeToSameNetwork();
@@ -330,6 +336,40 @@ contract MultichainProxy is OnlySourceFunctionality {
         // Some Multichain complying tokens may wrap nothing
         if (underlyingToken == address(0)) {
             underlyingToken = token;
+        }
+    }
+
+    /**
+     * @dev Appends new available routers
+     * @param _routers Routers addresses to add
+     */
+    function addAvailableAnyRouters(address[] memory _routers) public onlyManagerOrAdmin {
+        uint256 length = _routers.length;
+        for (uint256 i; i < length; ) {
+            address _router = _routers[i];
+            if (_router == address(0)) {
+                revert ZeroAddress();
+            }
+            // Check that router exists is performed inside the library
+            availableAnyRouters.add(_router);
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    /**
+     * @dev Removes existing available routers
+     * @param _routers Routers addresses to remove
+     */
+    function removeAvailableAnyRouters(address[] memory _routers) public onlyManagerOrAdmin {
+        uint256 length = _routers.length;
+        for (uint256 i; i < length; ) {
+            // Check that router exists is performed inside the library
+            availableAnyRouters.remove(_routers[i]);
+            unchecked {
+                ++i;
+            }
         }
     }
 }
