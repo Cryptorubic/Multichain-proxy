@@ -334,7 +334,7 @@ describe('Multichain Proxy', () => {
                 ).to.be.eq(feeAmount, 'wrong Rubic fees collected');
             });
 
-            it.only('Should swap native token for token and transfer to AnyRouter with integrator', async () => {
+            it('Should swap native token for token and transfer to AnyRouter with integrator', async () => {
                 await multichain.setIntegratorInfo(integratorWallet.address, {
                     isIntegrator: true,
                     tokenFee: '60000', // 6%
