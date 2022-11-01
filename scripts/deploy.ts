@@ -21,6 +21,7 @@ async function main() {
         0,
         0,
         onChain.dex,
+        multiConfig.anyRouters,
         [],
         [],
         []
@@ -28,9 +29,11 @@ async function main() {
 
     await multichainContract.deployed();
 
-    await multichainContract.addAvailableRouters(multiConfig.anyRouters);
-
     console.log('Multichain Proxy deployed to:', multichainContract.address);
+
+    await new Promise(r => setTimeout(r, 10000));
+
+    await multichainContract.grantRole('0xaE6FAf6C1c0006b81ce04308E225B01D9b667A6E');
 
     await new Promise(r => setTimeout(r, 10000));
 
@@ -39,7 +42,16 @@ async function main() {
 
     await hre.run('verify:verify', {
         address: multichainContract.address,
-        constructorArguments: [wrappedConfig.wnative, 0, 0, onChain.dex, [], [], []]
+        constructorArguments: [
+            wrappedConfig.wnative,
+            0,
+            0,
+            onChain.dex,
+            multiConfig.anyRouters,
+            [],
+            [],
+            []
+        ]
     });
 }
 
