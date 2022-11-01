@@ -2,7 +2,14 @@
 import { ethers, waffle } from 'hardhat';
 import { deployContractFixtureInFork } from './shared/fixtures';
 import { Wallet } from '@ethersproject/wallet';
-import { Encode, MultichainProxy, TestERC20, TestUnderlying, WETH9 } from '../typechain';
+import {
+    Encode,
+    MultichainProxy,
+    TestERC20,
+    TestERCApprove,
+    TestUnderlying,
+    WETH9
+} from '../typechain';
 import { expect } from 'chai';
 import {
     DEFAULT_EMPTY_MESSAGE,
@@ -31,6 +38,7 @@ describe('Multichain Proxy', () => {
     let multichain: MultichainProxy;
     let wnative: WETH9;
     let ercUnderlying: TestUnderlying;
+    let ercApprove: TestERCApprove;
 
     async function callBridge(
         data: BytesLike,
@@ -138,7 +146,7 @@ describe('Multichain Proxy', () => {
     });
 
     beforeEach('deploy fixture', async () => {
-        ({ multichain, encoder, swapToken, transitToken, ercUnderlying, wnative } =
+        ({ multichain, encoder, swapToken, transitToken, ercUnderlying, wnative, ercApprove } =
             await loadFixture(deployContractFixtureInFork));
     });
 
@@ -150,7 +158,7 @@ describe('Multichain Proxy', () => {
             });
 
             it('Should transfer transit token to AnyRouter without integrator', async () => {
-                const { feeAmount } = await calcTokenFees({
+                const { feeAmount, amountWithoutFee } = await calcTokenFees({
                     bridge: multichain,
                     amountWithFee: DEFAULT_AMOUNT_IN
                 });
@@ -162,7 +170,7 @@ describe('Multichain Proxy', () => {
                 await expect(callBridge('0x')).to.emit(multichain, 'RequestSent');
 
                 expect(await transitToken.allowance(multichain.address, ANY_ROUTER_POLY)).to.be.eq(
-                    0
+                    ethers.constants.MaxUint256.sub(amountWithoutFee)
                 );
                 expect(await waffle.provider.getBalance(multichain.address)).to.be.eq(
                     totalCryptoFee,
@@ -181,6 +189,18 @@ describe('Multichain Proxy', () => {
                 await expect(
                     callBridge('0x', { srcInputToken: ercUnderlying.address })
                 ).to.be.revertedWith('SafeERC20: low-level call failed');
+            });
+
+            it('Check for possible incorrect token', async () => {
+                await ercApprove.approve(multichain.address, ethers.constants.MaxUint256);
+
+                // should success
+                await callBridge('0x', { srcInputToken: ercApprove.address });
+                // check for second time with allowance
+                await callBridge('0x', { srcInputToken: ercApprove.address });
+                expect(await ercApprove.allowance(multichain.address, ANY_ROUTER_POLY)).to.be.eq(
+                    ethers.constants.MaxUint256
+                );
             });
         });
 
@@ -314,7 +334,7 @@ describe('Multichain Proxy', () => {
                 ).to.be.eq(feeAmount, 'wrong Rubic fees collected');
             });
 
-            it('Should swap native token for token and transfer to AnyRouter with integrator', async () => {
+            it.only('Should swap native token for token and transfer to AnyRouter with integrator', async () => {
                 await multichain.setIntegratorInfo(integratorWallet.address, {
                     isIntegrator: true,
                     tokenFee: '60000', // 6%
@@ -323,11 +343,12 @@ describe('Multichain Proxy', () => {
                     fixedFeeAmount: BN.from(0)
                 });
 
-                const { feeAmount, integratorFee, RubicFee } = await calcTokenFees({
-                    bridge: multichain,
-                    amountWithFee: DEFAULT_AMOUNT_IN,
-                    integrator: integratorWallet.address
-                });
+                const { feeAmount, amountWithoutFee, integratorFee, RubicFee } =
+                    await calcTokenFees({
+                        bridge: multichain,
+                        amountWithFee: DEFAULT_AMOUNT_IN,
+                        integrator: integratorWallet.address
+                    });
                 const { totalCryptoFee } = await calcCryptoFees({
                     bridge: multichain,
                     integrator: integratorWallet.address
@@ -346,7 +367,6 @@ describe('Multichain Proxy', () => {
                     )
                 ).to.be.revertedWith('LessOrEqualsMinAmount()');
                 await multichain.setMinTokenAmount(transitToken.address, 0);
-
                 await expect(
                     callBridge(
                         swapData,
@@ -354,10 +374,6 @@ describe('Multichain Proxy', () => {
                         DEFAULT_AMOUNT_IN
                     )
                 ).to.emit(multichain, 'RequestSent');
-
-                expect(await transitToken.allowance(multichain.address, ANY_ROUTER_POLY)).to.be.eq(
-                    0
-                );
 
                 expect(
                     await multichain.availableIntegratorTokenFee(
