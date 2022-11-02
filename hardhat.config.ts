@@ -15,8 +15,6 @@ dotenv.config();
 const DEFAULT_PRIVATE_KEY =
     process.env.MNEMONIC || '1000000000000000000000000000000000000000000000000000000000000000';
 const KAVA = process.env.KAVA_API_KEY;
-const MOONBEAM = process.env.MOONBEAM_API_KEY;
-const MOONRIVER = process.env.MOONRIVER_API_KEY;
 
 const DEFAULT_COMPILER_SETTINGS: SolcUserConfig = {
     version: '0.8.16',
@@ -252,13 +250,13 @@ module.exports = {
             arbitrum: process.env.ARBITRUM_API_KEY,
             // optimism
             optimism: process.env.OPTIMISM_API_KEY,
-            // optimism
+            // moonbeam
             moonbeam: process.env.MOONBEAM_API_KEY,
+            // moonriver
+            moonriver: process.env.MOONRIVER_API_KEY,
         },
         // apiKey: 
         // `${KAVA}`,
-        // `${MOONRIVER}`,
-        // `${MOONBEAM}`,
         customChains: [
             {
                 network: 'celo',
