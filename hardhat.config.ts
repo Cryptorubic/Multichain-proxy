@@ -217,6 +217,20 @@ module.exports = {
             live: true,
             saveDeployments: true,
             accounts: [`0x${DEFAULT_PRIVATE_KEY}`]
+        },
+        metis: {
+            url: 'https://andromeda.metis.io/?owner=1088',
+            chainId: 1088,
+            live: true,
+            saveDeployments: true,
+            accounts: [`0x${DEFAULT_PRIVATE_KEY}`]
+        },
+        oasis: {
+            url: 'https://emerald.oasis.dev',
+            chainId: 42262,
+            live: true,
+            saveDeployments: true,
+            accounts: [`0x${DEFAULT_PRIVATE_KEY}`]
         }
     },
     etherscan: {

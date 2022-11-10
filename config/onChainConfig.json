@@ -141,6 +141,16 @@
         "0x8a340F39A468C2FcBFFf2122446a9A0745A313Ad",
         "0xEa3CB4Ba9d1fD6fb19Df1380958d5649bD3e7C50"
       ]
+    },
+    {
+      "id": 1088,
+      "name": "metis",
+      "dex": []
+    },
+    {
+      "id": 42262,
+      "name": "oasis",
+      "dex": []
     }
   ]
 }

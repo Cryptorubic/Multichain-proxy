@@ -89,6 +89,16 @@
       "id": 32520,
       "name": "bitgert",
       "wnative": "0x0eb9036cbE0f052386f36170c6b07eF0a0E3f710"
+    },
+    {
+      "id": 1088,
+      "name": "metis",
+      "wnative": "0xDeadDeAddeAddEAddeadDEaDDEAdDeaDDeAD0000"
+    },
+    {
+      "id": 42262,
+      "name": "oasis",
+      "wnative": "0x21C718C22D52d0F3a789b752D4c2fD5908a8A733"
     }
   ]
 }

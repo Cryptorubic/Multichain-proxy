@@ -43,9 +43,9 @@ async function main() {
         '0xaE6FAf6C1c0006b81ce04308E225B01D9b667A6E'
     );
 
-    await new Promise(r => setTimeout(r, 10000));
+    // await new Promise(r => setTimeout(r, 10000));
 
-    await multichainContract.transferAdmin('0x105A3BA3637A29D36F61c7F03f55Da44B4591Cd1');
+    // await multichainContract.transferAdmin('');
     console.log('Admin role granted.');
 
     await hre.run('verify:verify', {

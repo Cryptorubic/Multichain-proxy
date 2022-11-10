@@ -258,6 +258,11 @@
       "id": 66,
       "name": "okx",
       "routers": ["0x362fA9D0bCa5D19f743Db50738345ce2b40eC99f"]
+    },
+    {
+      "id": 1088,
+      "name": "metis",
+      "routers": []
     }
   ]
 }
