@@ -372,4 +372,11 @@ contract MultichainProxy is OnlySourceFunctionality {
             }
         }
     }
+
+    /**
+     * @return Available any routers
+     */
+    function getAvailableAnyRouters() external view returns (address[] memory) {
+        return availableAnyRouters.values();
+    }
 }
