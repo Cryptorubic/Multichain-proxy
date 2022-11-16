@@ -8,7 +8,9 @@ import {
     TestERC20,
     TestERCApprove,
     TestUnderlying,
-    WETH9
+    WETH9,
+    AnyswapV4ERC20,
+    LtcSwapAsset
 } from '../typechain';
 import { expect } from 'chai';
 import {
@@ -42,8 +44,8 @@ describe('Multichain Proxy', () => {
     let ercUnderlying: TestUnderlying;
     let ercApprove: TestERCApprove;
 
-    let AnySwapOutEvm: AnyswapV4ERC20;
-    let AnySwapOutNotEvm: LtcSwapAsset;
+    let anySwapOutEvm: AnyswapV4ERC20;
+    let anySwapOutNotEvm: LtcSwapAsset;
 
     async function callBridge(
         data: BytesLike,
@@ -143,6 +145,92 @@ describe('Multichain Proxy', () => {
         }
     }
 
+    async function callBridgeWithSwapOut(
+        data: BytesLike,
+        {
+            srcInputToken = anySwapOutEvm.address,
+            dstOutputToken = anySwapOutEvm.address,
+            integrator = ethers.constants.AddressZero,
+            recipient = swapper.address,
+            recipientNotEvm = '',
+            srcInputAmount = DEFAULT_AMOUNT_IN,
+            dstMinOutputAmount = MIN_TOKEN_AMOUNT,
+            dstChainID = DEFAULT_DST_CHAIN,
+            router = anySwapOutEvm.address,
+            dex = DEX
+        } = {},
+        value?: BN
+    ): Promise<ContractTransaction> {
+        if (value === undefined) {
+            // call with tokens
+            value = (
+                await calcCryptoFees({
+                    bridge: multichain,
+                    integrator: integrator === ethers.constants.AddressZero ? undefined : integrator
+                })
+            ).totalCryptoFee;
+            if (data === DEFAULT_EMPTY_MESSAGE) {
+                return multichain.multiSwapOut(
+                    {
+                        srcInputToken,
+                        srcInputAmount,
+                        dstChainID,
+                        dstOutputToken,
+                        dstMinOutputAmount,
+                        recipient,
+                        integrator,
+                        router
+                    },
+                    recipientNotEvm,
+                    { value: value }
+                );
+            } else {
+                return multichain.multiSwapOutWithSwap(
+                    dex,
+                    dstOutputToken,
+                    data,
+                    {
+                        srcInputToken,
+                        srcInputAmount,
+                        dstChainID,
+                        dstOutputToken,
+                        dstMinOutputAmount,
+                        recipient,
+                        integrator,
+                        router
+                    },
+                    recipientNotEvm,
+                    { value: value }
+                );
+            }
+        }
+
+        value = (
+            await calcCryptoFees({
+                bridge: multichain,
+                integrator: integrator === ethers.constants.AddressZero ? undefined : integrator
+            })
+        ).totalCryptoFee.add(srcInputAmount);
+
+        return multichain.multiSwapOutWithSwapNative(
+            dex,
+            dstOutputToken,
+            data,
+            {
+                srcInputToken,
+                srcInputAmount,
+                dstChainID,
+                dstOutputToken,
+                dstMinOutputAmount,
+                recipient,
+                integrator,
+                router
+            },
+            recipientNotEvm,
+            { value: value }
+        );
+    }
+
     let loadFixture: ReturnType<typeof createFixtureLoader>;
 
     before('create fixture loader', async () => {
@@ -151,8 +239,17 @@ describe('Multichain Proxy', () => {
     });
 
     beforeEach('deploy fixture', async () => {
-        ({ multichain, encoder, swapToken, transitToken, ercUnderlying, wnative, ercApprove } =
-            await loadFixture(deployContractFixtureInFork));
+        ({
+            multichain,
+            encoder,
+            swapToken,
+            transitToken,
+            ercUnderlying,
+            wnative,
+            ercApprove,
+            anySwapOutEvm,
+            anySwapOutNotEvm
+        } = await loadFixture(deployContractFixtureInFork));
     });
 
     describe('Multichain proxy tests', () => {
@@ -348,12 +445,11 @@ describe('Multichain Proxy', () => {
                     fixedFeeAmount: BN.from(0)
                 });
 
-                const { feeAmount, amountWithoutFee, integratorFee, RubicFee } =
-                    await calcTokenFees({
-                        bridge: multichain,
-                        amountWithFee: DEFAULT_AMOUNT_IN,
-                        integrator: integratorWallet.address
-                    });
+                const { feeAmount, integratorFee, RubicFee } = await calcTokenFees({
+                    bridge: multichain,
+                    amountWithFee: DEFAULT_AMOUNT_IN,
+                    integrator: integratorWallet.address
+                });
                 const { totalCryptoFee } = await calcCryptoFees({
                     bridge: multichain,
                     integrator: integratorWallet.address
@@ -587,6 +683,61 @@ describe('Multichain Proxy', () => {
             it('owner should sweep tokens', async () => {
                 await multichain.sweepTokens(transitToken.address, ethers.utils.parseEther('1'));
                 await multichain.sweepTokens(swapToken.address, ethers.utils.parseEther('1'));
+            });
+        });
+
+        describe('#multiSwapOut', () => {
+            beforeEach('prepare before bridges', async () => {
+                await anySwapOutEvm.approve(multichain.address, ethers.constants.MaxUint256);
+                await anySwapOutNotEvm.approve(multichain.address, ethers.constants.MaxUint256);
+            });
+
+            it('should bridge to evm blockchain', async () => {
+                await expect(callBridgeWithSwapOut('0x')).to.emit(multichain, 'RequestSent');
+            });
+
+            it('should revert with incorrect recipent to evm', async () => {
+                await expect(callBridgeWithSwapOut('0x', { recipientNotEvm: '123' })).to.be
+                    .reverted;
+            });
+
+            it('should bridge to not-evm blockchain', async () => {
+                await expect(
+                    callBridgeWithSwapOut('0x', {
+                        srcInputToken: anySwapOutNotEvm.address,
+                        recipientNotEvm: '123'
+                    })
+                ).to.emit(multichain, 'RequestSent');
+            });
+
+            it('should revert with incorrect recipent to not evm', async () => {
+                await expect(callBridgeWithSwapOut('0x')).to.be.reverted;
+            });
+
+            it('should revert with incorrect recipent to not evm', async () => {
+                let value = (
+                    await calcCryptoFees({
+                        bridge: multichain,
+                        integrator: ethers.constants.AddressZero
+                    })
+                ).totalCryptoFee;
+
+                await expect(
+                    multichain.multiSwapOut(
+                        {
+                            srcInputToken: anySwapOutEvm.address,
+                            srcInputAmount: DEFAULT_AMOUNT_IN,
+                            dstChainID: DEFAULT_DST_CHAIN,
+                            dstOutputToken: anySwapOutEvm.address,
+                            dstMinOutputAmount: MIN_TOKEN_AMOUNT,
+                            recipient: swapper.address,
+                            integrator: ethers.constants.AddressZero,
+                            router: anySwapOutEvm.address
+                        },
+                        '',
+                        { value: value.add(1) }
+                    )
+                ).to.be.revertedWith('TooMuchValue');
             });
         });
     });

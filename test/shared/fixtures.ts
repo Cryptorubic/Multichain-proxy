@@ -63,11 +63,11 @@ export const deployContractFixtureInFork: Fixture<DeployContractFixture> = async
     wnative = wnative.connect(wallets[0]);
 
     const AnySwapOutNotEvmFactory = await ethers.getContractFactory('LtcSwapAsset');
-    let anySwapOutNotEvm = AnySwapOutNotEvmFactory.attach(anyERCV5LTC) as LtcSwapAsset;
+    let anySwapOutNotEvm = (await AnySwapOutNotEvmFactory.deploy()) as LtcSwapAsset;
     anySwapOutNotEvm = anySwapOutNotEvm.connect(wallets[0]);
 
     const AnySwapOutEvmFactory = await ethers.getContractFactory('AnyswapV4ERC20');
-    let anySwapOutEvm = AnySwapOutEvmFactory.attach(anyERCV1) as AnyswapV4ERC20;
+    let anySwapOutEvm = (await AnySwapOutEvmFactory.deploy()) as AnyswapV4ERC20;
     anySwapOutEvm = anySwapOutEvm.connect(wallets[0]);
 
     const encodeFactory = await ethers.getContractFactory('Encode');
