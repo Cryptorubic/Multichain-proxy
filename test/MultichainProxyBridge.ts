@@ -23,7 +23,9 @@ import {
     ANY_NATIVE_POLY,
     DEFAULT_AMOUNT_MIN,
     FIXED_CRYPTO_FEE,
-    TRANSIT_TOKEN
+    TRANSIT_TOKEN,
+    anyERCV1,
+    anyERCV5LTC
 } from './shared/consts';
 import { BigNumber as BN, BytesLike, ContractTransaction } from 'ethers';
 import { calcCryptoFees, calcTokenFees } from './shared/utils';
@@ -39,6 +41,9 @@ describe('Multichain Proxy', () => {
     let wnative: WETH9;
     let ercUnderlying: TestUnderlying;
     let ercApprove: TestERCApprove;
+
+    let AnySwapOutEvm: AnyswapV4ERC20;
+    let AnySwapOutNotEvm: LtcSwapAsset;
 
     async function callBridge(
         data: BytesLike,

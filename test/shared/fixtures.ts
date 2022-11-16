@@ -1,7 +1,16 @@
 /* eslint-disable @typescript-eslint/no-magic-numbers */
 import { Fixture } from 'ethereum-waffle';
 import { ethers, network } from 'hardhat';
-import { MultichainProxy, TestERC20, WETH9, Encode, TestUnderlying, TestERCApprove } from '../../typechain';
+import {
+    MultichainProxy,
+    TestERC20,
+    WETH9,
+    Encode,
+    TestUnderlying,
+    TestERCApprove,
+    LtcSwapAsset,
+    AnyswapV4ERC20
+} from '../../typechain';
 import WETHJSON from '../../artifacts/contracts/test/WETH9.sol/WETH9.json';
 import {
     RUBIC_PLATFORM_FEE,
@@ -12,7 +21,9 @@ import {
     NATIVE_POLY,
     SWAP_TOKEN,
     TRANSIT_TOKEN,
-    DEX
+    DEX,
+    anyERCV1,
+    anyERCV5LTC
 } from './consts';
 import { expect } from 'chai';
 
@@ -24,6 +35,8 @@ interface DeployContractFixture {
     ercUnderlying: TestUnderlying;
     wnative: WETH9;
     ercApprove: TestERCApprove;
+    anySwapOutEvm: AnyswapV4ERC20;
+    anySwapOutNotEvm: LtcSwapAsset;
 }
 
 export const deployContractFixtureInFork: Fixture<DeployContractFixture> = async function (
@@ -49,6 +62,14 @@ export const deployContractFixtureInFork: Fixture<DeployContractFixture> = async
     let wnative = wnativeFactory.attach(NATIVE_POLY) as WETH9;
     wnative = wnative.connect(wallets[0]);
 
+    const AnySwapOutNotEvmFactory = await ethers.getContractFactory('LtcSwapAsset');
+    let anySwapOutNotEvm = AnySwapOutNotEvmFactory.attach(anyERCV5LTC) as LtcSwapAsset;
+    anySwapOutNotEvm = anySwapOutNotEvm.connect(wallets[0]);
+
+    const AnySwapOutEvmFactory = await ethers.getContractFactory('AnyswapV4ERC20');
+    let anySwapOutEvm = AnySwapOutEvmFactory.attach(anyERCV1) as AnyswapV4ERC20;
+    anySwapOutEvm = anySwapOutEvm.connect(wallets[0]);
+
     const encodeFactory = await ethers.getContractFactory('Encode');
     let encoder = (await encodeFactory.deploy()) as Encode;
 
@@ -60,6 +81,7 @@ export const deployContractFixtureInFork: Fixture<DeployContractFixture> = async
         RUBIC_PLATFORM_FEE,
         [DEX],
         [ANY_ROUTER_POLY],
+        [anySwapOutEvm.address, anySwapOutNotEvm.address],
         [transitToken.address, swapToken.address],
         [MIN_TOKEN_AMOUNT, MIN_TOKEN_AMOUNT],
         [MAX_TOKEN_AMOUNT, MAX_TOKEN_AMOUNT]
@@ -103,6 +125,8 @@ export const deployContractFixtureInFork: Fixture<DeployContractFixture> = async
         transitToken,
         ercUnderlying,
         wnative,
-        ercApprove
+        ercApprove,
+        anySwapOutEvm,
+        anySwapOutNotEvm
     };
 };

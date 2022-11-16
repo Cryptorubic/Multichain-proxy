@@ -38,6 +38,7 @@ contract MultichainProxy is OnlySourceFunctionality {
         uint256 _rubicPlatformFee,
         address[] memory _routers,
         address[] memory _anyRouters,
+        address[] memory _anyTokens,
         address[] memory _tokens,
         uint256[] memory _minTokenAmounts,
         uint256[] memory _maxTokenAmounts
@@ -45,6 +46,7 @@ contract MultichainProxy is OnlySourceFunctionality {
         nativeWrap = _nativeWrap;
         initialize(_fixedCryptoFee, _rubicPlatformFee, _routers, _tokens, _minTokenAmounts, _maxTokenAmounts);
         addAvailableAnyRouters(_anyRouters);
+        addAvailableAnyTokens(_anyTokens);
     }
 
     function initialize(
