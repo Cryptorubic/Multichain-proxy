@@ -24,7 +24,12 @@ contract MultichainProxy is OnlySourceFunctionality {
     address public immutable nativeWrap;
 
     // AddressSet of whitelisted AnyRouters
+    // This addresses are approved on max amount
     EnumerableSetUpgradeable.AddressSet internal availableAnyRouters;
+
+    // AddressSet of whitelisted AnyTokens
+    // This addresses don't need approve
+    EnumerableSetUpgradeable.AddressSet internal availableAnyTokens;
 
     constructor(
         address _nativeWrap,
@@ -282,7 +287,7 @@ contract MultichainProxy is OnlySourceFunctionality {
         address _underlyingToken
     ) private {
         // Give Anyswap approval to bridge tokens
-        SmartApprove.smartApprove(_underlyingToken, _amount, _anyRouter);
+        SmartApprove.smartApprove(_underlyingToken, _amount, _anyRouter); // TODO test approves only on underlying
         // Was the token wrapping another token?
         if (_anyTokenIn != _underlyingToken) {
             IAnyswapRouter(_anyRouter).anySwapOutUnderlying(_anyTokenIn, _recipient, _amount, _dstChain);
@@ -378,5 +383,46 @@ contract MultichainProxy is OnlySourceFunctionality {
      */
     function getAvailableAnyRouters() external view returns (address[] memory) {
         return availableAnyRouters.values();
+    }
+
+    /**
+     * @dev Appends new available tokens
+     * @param _tokens Any tokens addresses to add
+     */
+    function addAvailableAnyTokens(address[] memory _tokens) public onlyManagerOrAdmin {
+        uint256 length = _tokens.length;
+        for (uint256 i; i < length; ) {
+            address _token = _tokens[i];
+            if (_token == address(0)) {
+                revert ZeroAddress();
+            }
+            // Check that router exists is performed inside the library
+            availableAnyTokens.add(_token);
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    /**
+     * @dev Removes existing available routers
+     * @param _tokens Routers addresses to remove
+     */
+    function removeAvailableAnyTokens(address[] memory _tokens) public onlyManagerOrAdmin {
+        uint256 length = _tokens.length;
+        for (uint256 i; i < length; ) {
+            // Check that router exists is performed inside the library
+            availableAnyTokens.remove(_tokens[i]);
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    /**
+     * @return Available any routers
+     */
+    function getAvailableAnyTokens() external view returns (address[] memory) {
+        return availableAnyTokens.values();
     }
 }
