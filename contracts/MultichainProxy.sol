@@ -16,6 +16,7 @@ error DexNotAvailable();
 error CannotBridgeToSameNetwork();
 error LessOrEqualsMinAmount();
 error IncorrectAnyNative();
+error TokenNotAvailable();
 
 contract MultichainProxy is OnlySourceFunctionality {
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
@@ -88,7 +89,7 @@ contract MultichainProxy is OnlySourceFunctionality {
             underlyingToken
         );
 
-        // emit underlying token 
+        // emit underlying token
         _params.srcInputToken = underlyingToken;
         emit RequestSent(_params, 'native:Multichain');
     }
@@ -212,6 +213,127 @@ contract MultichainProxy is OnlySourceFunctionality {
         emit RequestSent(_params, 'native:Multichain');
     }
 
+    function multiSwapOut(BaseCrossChainParams memory _params, string calldata _recipientNotEVM)
+        external
+        payable
+        nonReentrant
+        whenNotPaused
+    {
+        (_params.srcInputAmount, ) = _receiveTokens(_params.srcInputToken, _params.srcInputAmount);
+
+        IntegratorFeeInfo memory _info = integratorToFeeInfo[_params.integrator];
+
+        _params.srcInputAmount = accrueTokenFees(
+            _params.integrator,
+            _info,
+            _params.srcInputAmount,
+            0,
+            _params.srcInputToken
+        );
+
+        if (accrueFixedCryptoFee(_params.integrator, _info) != 0) {
+            revert TooMuchValue();
+        }
+
+        _checkParamsBeforeSwapOut(_params.srcInputToken, _params.srcInputAmount);
+
+        _swapOutTokens(_params.srcInputToken, _params.srcInputAmount, _params.recipient, _recipientNotEVM);
+
+        // backend will take _recipientNotEVM from input params if dstChainId is not EVM
+        emit RequestSent(_params, 'native:Multichain');
+    }
+
+    function multiSwapOutWithSwap(
+        address _dex,
+        address _anyTokenOut,
+        bytes calldata _swapData,
+        BaseCrossChainParams memory _params,
+        string calldata _recipientNotEVM
+    ) external payable nonReentrant whenNotPaused {
+        uint256 tokenInAfter;
+        (_params.srcInputAmount, tokenInAfter) = _receiveTokens(_params.srcInputToken, _params.srcInputAmount);
+
+        IntegratorFeeInfo memory _info = integratorToFeeInfo[_params.integrator];
+
+        _params.srcInputAmount = accrueTokenFees(
+            _params.integrator,
+            _info,
+            _params.srcInputAmount,
+            0,
+            _params.srcInputToken
+        );
+
+        if (accrueFixedCryptoFee(_params.integrator, _info) != 0) {
+            revert TooMuchValue();
+        }
+
+        IERC20Upgradeable(_params.srcInputToken).safeApprove(_dex, _params.srcInputAmount);
+
+        // always swap for any token
+        uint256 amountOut = _performSwap(_anyTokenOut, _dex, _swapData, false, 0);
+
+        _amountAndAllowanceChecks(_params.srcInputToken, _dex, _params.srcInputAmount, tokenInAfter);
+
+        _checkParamsBeforeSwapOut(_anyTokenOut, amountOut);
+
+        _swapOutTokens(_anyTokenOut, amountOut, _params.recipient, _recipientNotEVM);
+
+        emit RequestSent(_params, 'native:Multichain');
+    }
+
+    function multiSwapOutWithSwapNative(
+        address _dex,
+        address _anyTokenOut,
+        bytes calldata _swapData,
+        BaseCrossChainParams memory _params,
+        string calldata _recipientNotEVM
+    ) external payable nonReentrant whenNotPaused {
+        IntegratorFeeInfo memory _info = integratorToFeeInfo[_params.integrator];
+
+        _params.srcInputAmount = accrueTokenFees(
+            _params.integrator,
+            _info,
+            accrueFixedCryptoFee(_params.integrator, _info),
+            0,
+            address(0)
+        );
+
+        uint256 amountOut = _performSwap(_anyTokenOut, _dex, _swapData, false, _params.srcInputAmount);
+
+        _checkParamsBeforeSwapOut(_anyTokenOut, amountOut);
+
+        _swapOutTokens(_anyTokenOut, amountOut, _params.recipient, _recipientNotEVM);
+
+        emit RequestSent(_params, 'native:Multichain');
+    }
+
+    function _checkParamsBeforeSwapOut(address _anyToken, uint256 _amount) private view {
+        // initial min amount is 0
+        // revert in case we received 0 tokens after swap or _receiveTokens
+        if (_amount <= minTokenAmount[_anyToken]) {
+            revert LessOrEqualsMinAmount();
+        }
+        // max amount for multichain is very big, no checks for that
+
+        if (!availableAnyTokens.contains(_anyToken)) {
+            revert TokenNotAvailable();
+        }
+    }
+
+    function _swapOutTokens(
+        address _anyToken,
+        uint256 _amount,
+        address _recipientEVM,
+        string calldata _recipientNotEVM
+    ) private {
+        // nothing bad happens in case of hash collisions
+        if (keccak256(bytes(_recipientNotEVM)) == keccak256(bytes(''))) {
+            IAnyswapToken(_anyToken).Swapout(_amount, _recipientEVM);
+        } else {
+            IAnyswapToken(_anyToken).Swapout(_amount, _recipientNotEVM);
+        }
+    }
+
     /// @dev It's safe to approve multichain on max amount, no need to check allowance there
     /// @dev For multichain calls we use on-chain received amount, different amount spent can not happen
     /// @notice Use this function only after external calls with bytes data
@@ -240,21 +362,21 @@ contract MultichainProxy is OnlySourceFunctionality {
         address _tokenOut,
         address _dex,
         bytes calldata _data,
-        bool _isNative,
+        bool _isNativeOut,
         uint256 _value
     ) internal returns (uint256) {
         if (!availableRouters.contains(_dex)) {
             revert DexNotAvailable();
         }
 
-        uint256 balanceBeforeSwap = _isNative
+        uint256 balanceBeforeSwap = _isNativeOut
             ? address(this).balance
             : IERC20Upgradeable(_tokenOut).balanceOf(address(this));
 
         AddressUpgradeable.functionCallWithValue(_dex, _data, _value);
 
         return
-            _isNative
+            _isNativeOut
                 ? address(this).balance - balanceBeforeSwap
                 : IERC20Upgradeable(_tokenOut).balanceOf(address(this)) - balanceBeforeSwap;
     }
@@ -405,8 +527,8 @@ contract MultichainProxy is OnlySourceFunctionality {
     }
 
     /**
-     * @dev Removes existing available routers
-     * @param _tokens Routers addresses to remove
+     * @dev Removes existing available tokens
+     * @param _tokens Tokens addresses to remove
      */
     function removeAvailableAnyTokens(address[] memory _tokens) public onlyManagerOrAdmin {
         uint256 length = _tokens.length;
@@ -420,7 +542,7 @@ contract MultichainProxy is OnlySourceFunctionality {
     }
 
     /**
-     * @return Available any routers
+     * @return Available any tokens
      */
     function getAvailableAnyTokens() external view returns (address[] memory) {
         return availableAnyTokens.values();
