@@ -876,5 +876,52 @@ describe('Multichain Proxy', () => {
                 ).to.emit(multichain, 'RequestSent');
             });
         });
+
+        describe('Test swapout utils', () => {
+            beforeEach('prepare before bridges', async () => {
+                await anySwapOutEvm.approve(multichain.address, ethers.constants.MaxUint256);
+                await anySwapOutNotEvm.approve(multichain.address, ethers.constants.MaxUint256);
+            });
+
+            it('should add and remove multiple any routers from whitelist', async () => {
+                await multichain.addAvailableAnyRouters([swapper.address, wallet.address]);
+                await multichain.removeAvailableAnyRouters([ANY_ROUTER_POLY, wallet.address]);
+                expect(await multichain.getAvailableAnyRouters()).to.be.deep.eq([swapper.address]);
+            });
+
+            it('only manager can remove any routers', async () => {
+                await expect(
+                    multichain.connect(swapper).removeAvailableAnyRouters([ANY_ROUTER_POLY])
+                ).to.be.revertedWith('NotAManager()');
+            });
+
+            it('only manager can add routers', async () => {
+                await expect(
+                    multichain.connect(swapper).addAvailableRouters([multichain.address])
+                ).to.be.revertedWith('NotAManager()');
+            });
+
+            it('should add and remove multiple any tokens from whitelist', async () => {
+                await multichain.addAvailableAnyTokens([swapper.address, wallet.address]);
+                await multichain.removeAvailableAnyTokens([
+                    anySwapOutEvm.address,
+                    anySwapOutNotEvm.address,
+                    wallet.address
+                ]);
+                expect(await multichain.getAvailableAnyTokens()).to.be.deep.eq([swapper.address]);
+            });
+
+            it('only manager can remove any tokens', async () => {
+                await expect(
+                    multichain.connect(swapper).removeAvailableAnyTokens([ANY_ROUTER_POLY])
+                ).to.be.revertedWith('NotAManager()');
+            });
+
+            it('only manager can add tokens', async () => {
+                await expect(
+                    multichain.connect(swapper).addAvailableAnyTokens([multichain.address])
+                ).to.be.revertedWith('NotAManager()');
+            });
+        });
     });
 });
