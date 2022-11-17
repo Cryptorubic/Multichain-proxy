@@ -9,7 +9,8 @@ import {
     TestUnderlying,
     TestERCApprove,
     LtcSwapAsset,
-    AnyswapV4ERC20
+    AnyswapV4ERC20,
+    TestDEX
 } from '../../typechain';
 import WETHJSON from '../../artifacts/contracts/test/WETH9.sol/WETH9.json';
 import {
@@ -37,6 +38,7 @@ interface DeployContractFixture {
     ercApprove: TestERCApprove;
     anySwapOutEvm: AnyswapV4ERC20;
     anySwapOutNotEvm: LtcSwapAsset;
+    dexMock: TestDEX;
 }
 
 export const deployContractFixtureInFork: Fixture<DeployContractFixture> = async function (
@@ -70,6 +72,10 @@ export const deployContractFixtureInFork: Fixture<DeployContractFixture> = async
     let anySwapOutEvm = (await AnySwapOutEvmFactory.deploy()) as AnyswapV4ERC20;
     anySwapOutEvm = anySwapOutEvm.connect(wallets[0]);
 
+    const dexMockFactory = await ethers.getContractFactory('TestDEX');
+    let dexMock = (await dexMockFactory.deploy()) as TestDEX;
+    dexMock = dexMock.connect(wallets[0]);
+
     const encodeFactory = await ethers.getContractFactory('Encode');
     let encoder = (await encodeFactory.deploy()) as Encode;
 
@@ -79,7 +85,7 @@ export const deployContractFixtureInFork: Fixture<DeployContractFixture> = async
         NATIVE_POLY,
         FIXED_CRYPTO_FEE,
         RUBIC_PLATFORM_FEE,
-        [DEX],
+        [DEX, dexMock.address],
         [ANY_ROUTER_POLY],
         [anySwapOutEvm.address, anySwapOutNotEvm.address],
         [transitToken.address, swapToken.address],
@@ -127,6 +133,7 @@ export const deployContractFixtureInFork: Fixture<DeployContractFixture> = async
         wnative,
         ercApprove,
         anySwapOutEvm,
-        anySwapOutNotEvm
+        anySwapOutNotEvm,
+        dexMock
     };
 };
