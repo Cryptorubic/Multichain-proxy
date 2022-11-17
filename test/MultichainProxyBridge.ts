@@ -287,6 +287,11 @@ describe('Multichain Proxy', () => {
                 );
             });
 
+            it('should revert with not whitelisted any router', async () => {
+                await multichain.removeAvailableAnyRouters([ANY_ROUTER_POLY]);
+                await expect(callBridge('0x')).to.be.revertedWith('RouterNotAvailable()');
+            });
+
             it('Check for possible incorrect token', async () => {
                 await ercUnderlying.approve(multichain.address, ethers.constants.MaxUint256);
 
@@ -698,6 +703,25 @@ describe('Multichain Proxy', () => {
                 await expect(callBridgeWithSwapOut('0x')).to.emit(multichain, 'RequestSent');
             });
 
+            it('should revert with not whitelisted any token', async () => {
+                await multichain.removeAvailableAnyTokens([anySwapOutEvm.address]);
+                await expect(callBridgeWithSwapOut('0x')).to.be.revertedWith('TokenNotAvailable()');
+            });
+
+            it('should revert with not whitelisted any token', async () => {
+                await multichain.setMaxTokenAmount(
+                    anySwapOutEvm.address,
+                    ethers.utils.parseEther('10001')
+                );
+                await multichain.setMinTokenAmount(
+                    anySwapOutEvm.address,
+                    ethers.utils.parseEther('10000')
+                );
+                await expect(callBridgeWithSwapOut('0x')).to.be.revertedWith(
+                    'LessOrEqualsMinAmount()'
+                );
+            });
+
             it('should revert with incorrect recipent to evm', async () => {
                 await expect(callBridgeWithSwapOut('0x', { recipientNotEvm: '123' })).to.be
                     .reverted;
@@ -788,6 +812,21 @@ describe('Multichain Proxy', () => {
                         dstOutputToken: anySwapOutNotEvm.address
                     })
                 ).to.emit(multichain, 'RequestSent');
+            });
+
+            it('should revert when swapping differenat amount spent', async () => {
+                let swapData = await encoder.encodeDEXMock(
+                    anySwapOutNotEvm.address,
+                    DEFAULT_AMOUNT_IN.sub(ethers.utils.parseEther('1')),
+                    anySwapOutEvm.address
+                );
+
+                await expect(
+                    callBridgeWithSwapOut(swapData, {
+                        srcInputToken: anySwapOutNotEvm.address,
+                        dex: dexMock.address
+                    })
+                ).to.be.revertedWith('DifferentAmountSpent()');
             });
 
             it('should revert when swapping too much tokens with allowance', async () => {
@@ -887,6 +926,18 @@ describe('Multichain Proxy', () => {
                 await multichain.addAvailableAnyRouters([swapper.address, wallet.address]);
                 await multichain.removeAvailableAnyRouters([ANY_ROUTER_POLY, wallet.address]);
                 expect(await multichain.getAvailableAnyRouters()).to.be.deep.eq([swapper.address]);
+            });
+
+            it('should revert with zero address with adding any routers to whitelist', async () => {
+                await expect(
+                    multichain.addAvailableAnyRouters([ethers.constants.AddressZero])
+                ).to.be.revertedWith('ZeroAddress()');
+            });
+
+            it('should revert with zero address with adding any tokens to whitelist', async () => {
+                await expect(
+                    multichain.addAvailableAnyTokens([ethers.constants.AddressZero])
+                ).to.be.revertedWith('ZeroAddress()');
             });
 
             it('only manager can remove any routers', async () => {
