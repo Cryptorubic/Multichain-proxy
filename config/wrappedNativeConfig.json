@@ -99,6 +99,21 @@
       "id": 42262,
       "name": "oasis",
       "wnative": "0x21C718C22D52d0F3a789b752D4c2fD5908a8A733"
+    },
+    {
+      "id": 8217,
+      "name": "klaytn",
+      "wnative": "0xfd844c2fca5e595004b17615f891620d1cb9bbb2"
+    },
+    {
+      "id": 106,
+      "name": "velas",
+      "wnative": "0xc579D1f3CF86749E05CD06f7ADe17856c2CE3126"
+    },
+    {
+      "id": 57,
+      "name": "syscoin",
+      "wnative": "0xd3e822f3ef011Ca5f17D82C956D952D8d7C3A1BB"
     }
   ]
 }

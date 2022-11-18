@@ -295,9 +295,9 @@ module.exports = {
             // moonbeam
             moonbeam: process.env.MOONBEAM_API_KEY,
             // moonriver
-            moonriver: process.env.MOONRIVER_API_KEY,
+            moonriver: process.env.MOONRIVER_API_KEY
         },
-        // apiKey: 
+        // apiKey:
         // `${KAVA}`,
         customChains: [
             {
@@ -341,12 +341,12 @@ module.exports = {
                 }
             },
             {
-              network: "moonbeam",
-              chainId: 1313161554,
-              urls: {
-                apiURL: "https://api.aurorascan.dev/api",
-                browserURL: "https://moonbeam.moonscan.io/"
-              }
+                network: 'moonbeam',
+                chainId: 1313161554,
+                urls: {
+                    apiURL: 'https://api.aurorascan.dev/api',
+                    browserURL: 'https://moonbeam.moonscan.io/'
+                }
             },
             {
                 network: 'boba',

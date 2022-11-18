@@ -472,6 +472,7 @@ contract MultichainProxy is OnlySourceFunctionality {
      * @param _routers Routers addresses to add
      */
     function addAvailableAnyRouters(address[] memory _routers) public onlyManagerOrAdmin {
+        // TODO remove?
         uint256 length = _routers.length;
         for (uint256 i; i < length; ) {
             address _router = _routers[i];

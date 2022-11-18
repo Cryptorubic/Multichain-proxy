@@ -166,9 +166,10 @@
     {
       "id": 32520,
       "name": "bitgert",
-      "anyRouters": ["0x639a647fbe20b6c8ac19e48e2de44ea792c62c5c",
-    "0x65e66a61d0a8f1e686c2d6083ad611a10d84d97a"
-  ]
+      "anyRouters": [
+        "0x639a647fbe20b6c8ac19e48e2de44ea792c62c5c",
+        "0x65e66a61d0a8f1e686c2d6083ad611a10d84d97a"
+      ]
     },
     {
       "id": 1088,
@@ -182,8 +183,28 @@
     {
       "id": 42262,
       "name": "oasis",
+      "anyRouters": ["0xc1be9a4d5d45beeacae296a7bd5fadbfc14602c4"]
+    },
+    {
+      "id": 8217,
+      "name": "klaytn",
+      "anyRouters": ["0xfa9343c3897324496a05fc75abed6bac29f8a40f"]
+    },
+    {
+      "id": 106,
+      "name": "velas",
       "anyRouters": [
-        "0xc1be9a4d5d45beeacae296a7bd5fadbfc14602c4"
+        "0xf27ee99622c3c9b264583dacb2cce056e194494f",
+        "0x5d9ab5522c64e1f6ef5e3627eccc093f56167818",
+        "0xe6801928061cdbe32ac5ad0634427e140efd05f9"
+      ]
+    },
+    {
+      "id": 57,
+      "name": "syscoin",
+      "anyRouters": [
+        "0xdc42728b0ea910349ed3c6e1c9dc06b5fb591f98",
+        "0xfea7a6a0b346362bf88a9e4a88416b77a57d6c2a"
       ]
     }
   ]
