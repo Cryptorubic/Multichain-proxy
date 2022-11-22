@@ -8,62 +8,65 @@ import 'rubic-bridge-base/contracts/errors/Errors.sol';
 import 'rubic-bridge-base/contracts/libraries/SmartApprove.sol';
 import './interfaces/IAnyswapRouter.sol';
 import './interfaces/IAnyswapToken.sol';
+import 'rubic-whitelist-contract/contracts/interfaces/IRubicWhitelist.sol';
+
 
 error DifferentAmountSpent();
 error TooMuchValue();
-error RouterNotAvailable();
+error AnyRouterNotAvailable();
 error DexNotAvailable();
 error CannotBridgeToSameNetwork();
 error LessOrEqualsMinAmount();
 error IncorrectAnyNative();
-error TokenNotAvailable();
 
 contract MultichainProxy is OnlySourceFunctionality {
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     address public immutable nativeWrap;
+    IRubicWhitelist public whitelistRegistry;
 
-    // AddressSet of whitelisted AnyRouters
-    // This addresses are approved on max amount
-    EnumerableSetUpgradeable.AddressSet internal availableAnyRouters;
+    modifier onlyAvailableDex(address _dex) {
+        if (!whitelistRegistry.isWhitelistedDEX(_dex)) revert DexNotAvailable();
+        _;
+    }
 
-    // AddressSet of whitelisted AnyTokens
-    // This addresses don't need approve
-    EnumerableSetUpgradeable.AddressSet internal availableAnyTokens;
+    modifier onlyAvailableAnyRouter(address _anyRouter) {
+        if (!whitelistRegistry.isWhitelistedAnyRouter(_anyRouter)) revert AnyRouterNotAvailable();
+        _;
+    }
 
     constructor(
         address _nativeWrap,
         uint256 _fixedCryptoFee,
         uint256 _rubicPlatformFee,
-        address[] memory _routers,
-        address[] memory _anyRouters,
-        address[] memory _anyTokens,
+        IRubicWhitelist _whitelistRegistry,
         address[] memory _tokens,
         uint256[] memory _minTokenAmounts,
-        uint256[] memory _maxTokenAmounts
+        uint256[] memory _maxTokenAmounts,
+        address _admin
     ) {
         nativeWrap = _nativeWrap;
-        initialize(_fixedCryptoFee, _rubicPlatformFee, _routers, _tokens, _minTokenAmounts, _maxTokenAmounts);
-        addAvailableAnyRouters(_anyRouters);
-        addAvailableAnyTokens(_anyTokens);
+        whitelistRegistry = _whitelistRegistry;
+
+        initialize(_fixedCryptoFee, _rubicPlatformFee, _tokens, _minTokenAmounts, _maxTokenAmounts, _admin);
     }
 
     function initialize(
         uint256 _fixedCryptoFee,
         uint256 _rubicPlatformFee,
-        address[] memory _routers,
         address[] memory _tokens,
         uint256[] memory _minTokenAmounts,
-        uint256[] memory _maxTokenAmounts
+        uint256[] memory _maxTokenAmounts,
+        address _admin
     ) private initializer {
         __OnlySourceFunctionalityInit(
             _fixedCryptoFee,
             _rubicPlatformFee,
-            _routers,
             _tokens,
             _minTokenAmounts,
-            _maxTokenAmounts
+            _maxTokenAmounts,
+            _admin
         );
     }
 
@@ -316,10 +319,6 @@ contract MultichainProxy is OnlySourceFunctionality {
             revert LessOrEqualsMinAmount();
         }
         // max amount for multichain is very big, no checks for that
-
-        if (!availableAnyTokens.contains(_anyToken)) {
-            revert TokenNotAvailable();
-        }
     }
 
     function _swapOutTokens(
@@ -365,11 +364,7 @@ contract MultichainProxy is OnlySourceFunctionality {
         bytes calldata _data,
         bool _isNativeOut,
         uint256 _value
-    ) internal returns (uint256) {
-        if (!availableRouters.contains(_dex)) {
-            revert DexNotAvailable();
-        }
-
+    ) internal onlyAvailableDex(_dex)  returns (uint256) {
         uint256 balanceBeforeSwap = _isNativeOut
             ? address(this).balance
             : IERC20Upgradeable(_tokenOut).balanceOf(address(this));
@@ -440,16 +435,13 @@ contract MultichainProxy is OnlySourceFunctionality {
         address _transitToken,
         uint256 _amount,
         uint256 _dstChain
-    ) private view {
+    ) private onlyAvailableAnyRouter(_anyRouter) view {
         // initial min amount is 0
         // revert in case we received 0 tokens after swap
         if (_amount <= minTokenAmount[_transitToken]) {
             revert LessOrEqualsMinAmount();
         }
 
-        if (!availableAnyRouters.contains(_anyRouter)) {
-            revert RouterNotAvailable();
-        }
         if (block.chainid == _dstChain) revert CannotBridgeToSameNetwork();
     }
 
@@ -465,6 +457,18 @@ contract MultichainProxy is OnlySourceFunctionality {
         if (underlyingToken == address(0)) {
             underlyingToken = token;
         }
+    }
+
+    /**
+     * @dev Sets the address of a new whitelist registry contract
+     * @param _newWhitelistRegistry The address of the registry
+     */
+    function setWhitelistRegistry(IRubicWhitelist _newWhitelistRegistry) external onlyAdmin {
+        if (address(_newWhitelistRegistry) == address(0)) {
+            revert ZeroAddress();
+        }
+
+        whitelistRegistry = _newWhitelistRegistry;
     }
 
 }
