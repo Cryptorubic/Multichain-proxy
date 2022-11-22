@@ -214,13 +214,6 @@ contract MultichainProxy is OnlySourceFunctionality {
             );
         }
 
-        // emit underlying token or native
-        if (isNative) {
-            _params.srcInputToken = address(0);
-        } else {
-            _params.srcInputToken = underlyingToken;
-        }
-        _params.srcInputAmount = amountOut;
         emit RequestSent(_params, 'native:Multichain');
     }
 
@@ -260,10 +253,8 @@ contract MultichainProxy is OnlySourceFunctionality {
             _params.dstChainID,
             underlyingToken
         );
-
-        // emit underlying token
-        _params.srcInputToken = underlyingToken;
-        _params.srcInputAmount = amountOut;
+        
+        _params.srcInputToken = address(0);
         emit RequestSent(_params, 'native:Multichain');
     }
 
@@ -377,6 +368,7 @@ contract MultichainProxy is OnlySourceFunctionality {
 
         _swapOutTokens(_anyTokenOut, amountOut, _params.recipient, _recipientNotEVM);
 
+        _params.srcInputToken = address(0);
         emit RequestSent(_params, 'native:Multichain');
     }
 
@@ -438,7 +430,7 @@ contract MultichainProxy is OnlySourceFunctionality {
         uint256 _value
     ) internal returns (uint256) {
         if (!whitelistRegistry.isWhitelistedDEX(_dex)) revert DexNotAvailable();
-        
+
         uint256 balanceBeforeSwap = _isNativeOut
             ? address(this).balance
             : IERC20Upgradeable(_tokenOut).balanceOf(address(this));
