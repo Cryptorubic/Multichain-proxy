@@ -397,6 +397,10 @@ contract MultichainProxy is OnlySourceFunctionality {
             revert LessOrEqualsMinAmount();
         }
         // max amount for multichain is very big, no checks for that
+
+        // check if token is in WL is missing. Multichain has houndreds of any tokens, so it was decided
+        // to skip this check. There is no known contract with "SwapOut" selector, which will 
+        // be able to steal rubic commission from user for now.
     }
 
     function _swapOutTokens(
