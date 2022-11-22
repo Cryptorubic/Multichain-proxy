@@ -16,6 +16,7 @@
     "dotenv": "^10.0.0",
     "ganache-core": "^2.13.2",
     "keythereum": "^1.2.0",
+    "rubic-whitelist-contract": "^1.0.3",
     "truffle-plugin-verify": "^0.5.15",
     "web3": "^1.6.0"
   },
@@ -46,7 +47,7 @@
     "hardhat-gas-reporter": "^1.0.8",
     "prettier": "^2.5.1",
     "prettier-plugin-solidity": "^1.0.0-beta.18",
-    "rubic-bridge-base": "^1.5.0",
+    "rubic-bridge-base": "^1.6.0",
     "solhint": "^3.3.6",
     "solhint-plugin-prettier": "^0.0.5",
     "solidity-coverage": "^0.8.2",
