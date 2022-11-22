@@ -29,7 +29,7 @@ import {
     anyERCV1,
     anyERCV5LTC
 } from './shared/consts';
-import { BigNumber as BN, BytesLike, ContractTransaction } from 'ethers';
+import { BigNumber as BN, BytesLike, ContractTransaction, Contract } from 'ethers';
 import { calcCryptoFees, calcTokenFees } from './shared/utils';
 
 const createFixtureLoader = waffle.createFixtureLoader;
@@ -47,6 +47,7 @@ describe('Multichain Proxy', () => {
     let anySwapOutEvm: AnyswapV4ERC20;
     let anySwapOutNotEvm: LtcSwapAsset;
     let dexMock: TestDEX;
+    let whitelist: Contract;
 
     async function callBridge(
         data: BytesLike,
@@ -250,7 +251,8 @@ describe('Multichain Proxy', () => {
             ercApprove,
             anySwapOutEvm,
             anySwapOutNotEvm,
-            dexMock
+            dexMock,
+            whitelist
         } = await loadFixture(deployContractFixtureInFork));
     });
 
@@ -288,8 +290,8 @@ describe('Multichain Proxy', () => {
             });
 
             it('should revert with not whitelisted any router', async () => {
-                await multichain.removeAvailableAnyRouters([ANY_ROUTER_POLY]);
-                await expect(callBridge('0x')).to.be.revertedWith('RouterNotAvailable()');
+                await whitelist.removeAnyRouters([ANY_ROUTER_POLY]);
+                await expect(callBridge('0x')).to.be.revertedWith('AnyRouterNotAvailable()');
             });
 
             it('Check for possible incorrect token', async () => {
@@ -688,8 +690,16 @@ describe('Multichain Proxy', () => {
             });
 
             it('owner should sweep tokens', async () => {
-                await multichain.sweepTokens(transitToken.address, ethers.utils.parseEther('1'));
-                await multichain.sweepTokens(swapToken.address, ethers.utils.parseEther('1'));
+                await multichain.sweepTokens(
+                    transitToken.address,
+                    ethers.utils.parseEther('1'),
+                    wallet.address
+                );
+                await multichain.sweepTokens(
+                    swapToken.address,
+                    ethers.utils.parseEther('1'),
+                    wallet.address
+                );
             });
         });
 
@@ -703,9 +713,9 @@ describe('Multichain Proxy', () => {
                 await expect(callBridgeWithSwapOut('0x')).to.emit(multichain, 'RequestSent');
             });
 
-            it('should revert with not whitelisted any token', async () => {
-                await multichain.removeAvailableAnyTokens([anySwapOutEvm.address]);
-                await expect(callBridgeWithSwapOut('0x')).to.be.revertedWith('TokenNotAvailable()');
+            it('should not revert with not whitelisted any token', async () => {
+                await whitelist.removeAnyRouters([anySwapOutEvm.address]);
+                await expect(callBridgeWithSwapOut('0x')).to.emit(multichain, 'RequestSent');
             });
 
             it('should revert with not whitelisted any token', async () => {
@@ -793,6 +803,23 @@ describe('Multichain Proxy', () => {
                         dex: dexMock.address
                     })
                 ).to.emit(multichain, 'RequestSent');
+            });
+
+            it('should not revert with not whitelisted any token', async () => {
+                await multichain.setRubicPlatformFee(0);
+
+                let swapData = await encoder.encodeDEXMock(
+                    anySwapOutNotEvm.address,
+                    DEFAULT_AMOUNT_IN,
+                    anySwapOutEvm.address
+                );
+                await whitelist.removeDEXs([dexMock.address]);
+                await expect(
+                    callBridgeWithSwapOut(swapData, {
+                        srcInputToken: anySwapOutNotEvm.address,
+                        dex: dexMock.address
+                    })
+                ).to.be.revertedWith('DexNotAvailable()');
             });
 
             it('should swap tokens and swapout to not evm blockchain without token fees', async () => {
@@ -916,62 +943,17 @@ describe('Multichain Proxy', () => {
             });
         });
 
-        describe('Test swapout utils', () => {
-            beforeEach('prepare before bridges', async () => {
-                await anySwapOutEvm.approve(multichain.address, ethers.constants.MaxUint256);
-                await anySwapOutNotEvm.approve(multichain.address, ethers.constants.MaxUint256);
+        describe('#setWhitelistRegistry', () => {
+            it('should set new whitelist regisrty', async () => {
+                await multichain.setWhitelistRegistry(wallet.address);
+
+                await expect(await multichain.whitelistRegistry()).to.be.eq(wallet.address);
             });
 
-            it('should add and remove multiple any routers from whitelist', async () => {
-                await multichain.addAvailableAnyRouters([swapper.address, wallet.address]);
-                await multichain.removeAvailableAnyRouters([ANY_ROUTER_POLY, wallet.address]);
-                expect(await multichain.getAvailableAnyRouters()).to.be.deep.eq([swapper.address]);
-            });
-
-            it('should revert with zero address with adding any routers to whitelist', async () => {
+            it('should revert new whitelist regisrty with zero address', async () => {
                 await expect(
-                    multichain.addAvailableAnyRouters([ethers.constants.AddressZero])
+                    multichain.setWhitelistRegistry(ethers.constants.AddressZero)
                 ).to.be.revertedWith('ZeroAddress()');
-            });
-
-            it('should revert with zero address with adding any tokens to whitelist', async () => {
-                await expect(
-                    multichain.addAvailableAnyTokens([ethers.constants.AddressZero])
-                ).to.be.revertedWith('ZeroAddress()');
-            });
-
-            it('only manager can remove any routers', async () => {
-                await expect(
-                    multichain.connect(swapper).removeAvailableAnyRouters([ANY_ROUTER_POLY])
-                ).to.be.revertedWith('NotAManager()');
-            });
-
-            it('only manager can add routers', async () => {
-                await expect(
-                    multichain.connect(swapper).addAvailableRouters([multichain.address])
-                ).to.be.revertedWith('NotAManager()');
-            });
-
-            it('should add and remove multiple any tokens from whitelist', async () => {
-                await multichain.addAvailableAnyTokens([swapper.address, wallet.address]);
-                await multichain.removeAvailableAnyTokens([
-                    anySwapOutEvm.address,
-                    anySwapOutNotEvm.address,
-                    wallet.address
-                ]);
-                expect(await multichain.getAvailableAnyTokens()).to.be.deep.eq([swapper.address]);
-            });
-
-            it('only manager can remove any tokens', async () => {
-                await expect(
-                    multichain.connect(swapper).removeAvailableAnyTokens([ANY_ROUTER_POLY])
-                ).to.be.revertedWith('NotAManager()');
-            });
-
-            it('only manager can add tokens', async () => {
-                await expect(
-                    multichain.connect(swapper).addAvailableAnyTokens([multichain.address])
-                ).to.be.revertedWith('NotAManager()');
             });
         });
     });

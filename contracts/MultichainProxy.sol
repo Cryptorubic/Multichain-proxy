@@ -25,16 +25,6 @@ contract MultichainProxy is OnlySourceFunctionality {
     address public immutable nativeWrap;
     IRubicWhitelist public whitelistRegistry;
 
-    modifier onlyAvailableDex(address _dex) {
-        if (!whitelistRegistry.isWhitelistedDEX(_dex)) revert DexNotAvailable();
-        _;
-    }
-
-    modifier onlyAvailableAnyRouter(address _anyRouter) {
-        if (!whitelistRegistry.isWhitelistedAnyRouter(_anyRouter)) revert AnyRouterNotAvailable();
-        _;
-    }
-
     constructor(
         address _nativeWrap,
         uint256 _fixedCryptoFee,
@@ -446,7 +436,9 @@ contract MultichainProxy is OnlySourceFunctionality {
         bytes calldata _data,
         bool _isNativeOut,
         uint256 _value
-    ) internal onlyAvailableDex(_dex) returns (uint256) {
+    ) internal returns (uint256) {
+        if (!whitelistRegistry.isWhitelistedDEX(_dex)) revert DexNotAvailable();
+        
         uint256 balanceBeforeSwap = _isNativeOut
             ? address(this).balance
             : IERC20Upgradeable(_tokenOut).balanceOf(address(this));
@@ -525,12 +517,14 @@ contract MultichainProxy is OnlySourceFunctionality {
         address _transitToken,
         uint256 _amount,
         uint256 _dstChain
-    ) private view onlyAvailableAnyRouter(_anyRouter) {
+    ) private view {
         // initial min amount is 0
         // revert in case we received 0 tokens after swap
         if (_amount <= minTokenAmount[_transitToken]) {
             revert LessOrEqualsMinAmount();
         }
+
+        if (!whitelistRegistry.isWhitelistedAnyRouter(_anyRouter)) revert AnyRouterNotAvailable();
 
         if (block.chainid == _dstChain) revert CannotBridgeToSameNetwork();
     }

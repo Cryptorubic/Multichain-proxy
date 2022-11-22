@@ -14,6 +14,10 @@ import {
 } from '../../typechain';
 import WETHJSON from '../../artifacts/contracts/test/WETH9.sol/WETH9.json';
 import {
+    abi as WHITELIST_ABI,
+    bytecode as WHITELIST_BYTECODE
+} from 'rubic-whitelist-contract/artifacts/contracts/test/WhitelistMock.sol/WhitelistMock.json';
+import {
     RUBIC_PLATFORM_FEE,
     MIN_TOKEN_AMOUNT,
     MAX_TOKEN_AMOUNT,
@@ -39,6 +43,7 @@ interface DeployContractFixture {
     anySwapOutEvm: AnyswapV4ERC20;
     anySwapOutNotEvm: LtcSwapAsset;
     dexMock: TestDEX;
+    whitelist: Contract;
 }
 
 export const deployContractFixtureInFork: Fixture<DeployContractFixture> = async function (
@@ -79,18 +84,37 @@ export const deployContractFixtureInFork: Fixture<DeployContractFixture> = async
     const encodeFactory = await ethers.getContractFactory('Encode');
     let encoder = (await encodeFactory.deploy()) as Encode;
 
+    const whitelistFactory = await ethers.getContractFactory(WHITELIST_ABI, WHITELIST_BYTECODE);
+    const whitelist = await whitelistFactory.deploy([], wallets[0].address);
+
+    await whitelist.addDEXs([DEX, dexMock.address]);
+    await whitelist.addAnyRouters([
+        ANY_ROUTER_POLY,
+        anySwapOutEvm.address,
+        anySwapOutNotEvm.address
+    ]);
+
+    const routers = await whitelist.getAvailableDEXs();
+    await expect(routers).to.deep.eq([DEX, dexMock.address]);
+
+    const AnyRouters = await whitelist.getAvailableAnyRouters();
+    await expect(AnyRouters).to.deep.eq([
+        ANY_ROUTER_POLY,
+        anySwapOutEvm.address,
+        anySwapOutNotEvm.address
+    ]);
+
     const MultichainProxyFactory = await ethers.getContractFactory('MultichainProxy');
 
     const multichain = (await MultichainProxyFactory.deploy(
         NATIVE_POLY,
         FIXED_CRYPTO_FEE,
         RUBIC_PLATFORM_FEE,
-        [DEX, dexMock.address],
-        [ANY_ROUTER_POLY],
-        [anySwapOutEvm.address, anySwapOutNotEvm.address],
+        whitelist.address,
         [transitToken.address, swapToken.address],
         [MIN_TOKEN_AMOUNT, MIN_TOKEN_AMOUNT],
-        [MAX_TOKEN_AMOUNT, MAX_TOKEN_AMOUNT]
+        [MAX_TOKEN_AMOUNT, MAX_TOKEN_AMOUNT],
+        wallets[0].address
     )) as MultichainProxy;
 
     // part for seting storage
@@ -134,6 +158,7 @@ export const deployContractFixtureInFork: Fixture<DeployContractFixture> = async
         ercApprove,
         anySwapOutEvm,
         anySwapOutNotEvm,
-        dexMock
+        dexMock,
+        whitelist
     };
 };
