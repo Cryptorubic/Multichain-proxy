@@ -10,7 +10,6 @@ import './interfaces/IAnyswapRouter.sol';
 import './interfaces/IAnyswapToken.sol';
 import 'rubic-whitelist-contract/contracts/interfaces/IRubicWhitelist.sol';
 
-
 error DifferentAmountSpent();
 error TooMuchValue();
 error AnyRouterNotAvailable();
@@ -49,7 +48,14 @@ contract MultichainProxy is OnlySourceFunctionality {
         nativeWrap = _nativeWrap;
         whitelistRegistry = _whitelistRegistry;
 
-        initialize(_fixedCryptoFee, _rubicPlatformFee, _tokens, _minTokenAmounts, _maxTokenAmounts, _admin);
+        initialize(
+            _fixedCryptoFee,
+            _rubicPlatformFee,
+            _tokens,
+            _minTokenAmounts,
+            _maxTokenAmounts,
+            _admin
+        );
     }
 
     function initialize(
@@ -70,20 +76,36 @@ contract MultichainProxy is OnlySourceFunctionality {
         );
     }
 
-    function multiBridge(BaseCrossChainParams memory _params) external payable nonReentrant whenNotPaused {
+    function multiBridge(BaseCrossChainParams memory _params)
+        external
+        payable
+        nonReentrant
+        whenNotPaused
+    {
         (address underlyingToken, ) = _getUnderlyingToken(_params.srcInputToken);
 
         (_params.srcInputAmount, ) = _receiveTokens(underlyingToken, _params.srcInputAmount);
 
         IntegratorFeeInfo memory _info = integratorToFeeInfo[_params.integrator];
 
-        _params.srcInputAmount = accrueTokenFees(_params.integrator, _info, _params.srcInputAmount, 0, underlyingToken);
+        _params.srcInputAmount = accrueTokenFees(
+            _params.integrator,
+            _info,
+            _params.srcInputAmount,
+            0,
+            underlyingToken
+        );
 
         if (accrueFixedCryptoFee(_params.integrator, _info) != 0) {
             revert TooMuchValue();
         }
 
-        _checkParamsBeforeBridge(_params.router, underlyingToken, _params.srcInputAmount, _params.dstChainID);
+        _checkParamsBeforeBridge(
+            _params.router,
+            underlyingToken,
+            _params.srcInputAmount,
+            _params.dstChainID
+        );
 
         _bridgeTokens(
             _params.srcInputToken,
@@ -99,7 +121,12 @@ contract MultichainProxy is OnlySourceFunctionality {
         emit RequestSent(_params, 'native:Multichain');
     }
 
-    function multiBridgeNative(BaseCrossChainParams memory _params) external payable nonReentrant whenNotPaused {
+    function multiBridgeNative(BaseCrossChainParams memory _params)
+        external
+        payable
+        nonReentrant
+        whenNotPaused
+    {
         (address underlyingToken, ) = _getUnderlyingToken(_params.srcInputToken);
         // check if we use correct any native to prevent calling Anyswap with incorrect token
         // if the any token is incorrect -> tokens won't arrive in dst chain
@@ -118,7 +145,12 @@ contract MultichainProxy is OnlySourceFunctionality {
             address(0)
         );
 
-        _checkParamsBeforeBridge(_params.router, underlyingToken, _params.srcInputAmount, _params.dstChainID);
+        _checkParamsBeforeBridge(
+            _params.router,
+            underlyingToken,
+            _params.srcInputAmount,
+            _params.dstChainID
+        );
 
         _bridgeNative(
             _params.srcInputToken,
@@ -139,7 +171,10 @@ contract MultichainProxy is OnlySourceFunctionality {
         BaseCrossChainParams memory _params
     ) external payable nonReentrant whenNotPaused {
         uint256 tokenInAfter;
-        (_params.srcInputAmount, tokenInAfter) = _receiveTokens(_params.srcInputToken, _params.srcInputAmount);
+        (_params.srcInputAmount, tokenInAfter) = _receiveTokens(
+            _params.srcInputToken,
+            _params.srcInputAmount
+        );
 
         IntegratorFeeInfo memory _info = integratorToFeeInfo[_params.integrator];
 
@@ -161,12 +196,23 @@ contract MultichainProxy is OnlySourceFunctionality {
 
         uint256 amountOut = _performSwap(underlyingToken, _dex, _swapData, isNative, 0);
 
-        _amountAndAllowanceChecks(_params.srcInputToken, _dex, _params.srcInputAmount, tokenInAfter);
+        _amountAndAllowanceChecks(
+            _params.srcInputToken,
+            _dex,
+            _params.srcInputAmount,
+            tokenInAfter
+        );
 
         _checkParamsBeforeBridge(_params.router, underlyingToken, amountOut, _params.dstChainID);
 
         if (isNative) {
-            _bridgeNative(_anyTokenOut, _params.router, amountOut, _params.recipient, _params.dstChainID);
+            _bridgeNative(
+                _anyTokenOut,
+                _params.router,
+                amountOut,
+                _params.recipient,
+                _params.dstChainID
+            );
         } else {
             _bridgeTokens(
                 _anyTokenOut,
@@ -206,11 +252,24 @@ contract MultichainProxy is OnlySourceFunctionality {
 
         (address underlyingToken, ) = _getUnderlyingToken(_anyTokenOut);
 
-        uint256 amountOut = _performSwap(underlyingToken, _dex, _swapData, false, _params.srcInputAmount);
+        uint256 amountOut = _performSwap(
+            underlyingToken,
+            _dex,
+            _swapData,
+            false,
+            _params.srcInputAmount
+        );
 
         _checkParamsBeforeBridge(_params.router, underlyingToken, amountOut, _params.dstChainID);
 
-        _bridgeTokens(_anyTokenOut, _params.router, amountOut, _params.recipient, _params.dstChainID, underlyingToken);
+        _bridgeTokens(
+            _anyTokenOut,
+            _params.router,
+            amountOut,
+            _params.recipient,
+            _params.dstChainID,
+            underlyingToken
+        );
 
         // emit underlying token
         _params.srcInputToken = underlyingToken;
@@ -242,7 +301,12 @@ contract MultichainProxy is OnlySourceFunctionality {
 
         _checkParamsBeforeSwapOut(_params.srcInputToken, _params.srcInputAmount);
 
-        _swapOutTokens(_params.srcInputToken, _params.srcInputAmount, _params.recipient, _recipientNotEVM);
+        _swapOutTokens(
+            _params.srcInputToken,
+            _params.srcInputAmount,
+            _params.recipient,
+            _recipientNotEVM
+        );
 
         // backend will take _recipientNotEVM from input params if dstChainId is not EVM
         emit RequestSent(_params, 'native:Multichain');
@@ -256,7 +320,10 @@ contract MultichainProxy is OnlySourceFunctionality {
         string calldata _recipientNotEVM
     ) external payable nonReentrant whenNotPaused {
         uint256 tokenInAfter;
-        (_params.srcInputAmount, tokenInAfter) = _receiveTokens(_params.srcInputToken, _params.srcInputAmount);
+        (_params.srcInputAmount, tokenInAfter) = _receiveTokens(
+            _params.srcInputToken,
+            _params.srcInputAmount
+        );
 
         IntegratorFeeInfo memory _info = integratorToFeeInfo[_params.integrator];
 
@@ -277,7 +344,12 @@ contract MultichainProxy is OnlySourceFunctionality {
         // always swap for any token
         uint256 amountOut = _performSwap(_anyTokenOut, _dex, _swapData, false, 0);
 
-        _amountAndAllowanceChecks(_params.srcInputToken, _dex, _params.srcInputAmount, tokenInAfter);
+        _amountAndAllowanceChecks(
+            _params.srcInputToken,
+            _dex,
+            _params.srcInputAmount,
+            tokenInAfter
+        );
 
         _checkParamsBeforeSwapOut(_anyTokenOut, amountOut);
 
@@ -303,7 +375,13 @@ contract MultichainProxy is OnlySourceFunctionality {
             address(0)
         );
 
-        uint256 amountOut = _performSwap(_anyTokenOut, _dex, _swapData, false, _params.srcInputAmount);
+        uint256 amountOut = _performSwap(
+            _anyTokenOut,
+            _dex,
+            _swapData,
+            false,
+            _params.srcInputAmount
+        );
 
         _checkParamsBeforeSwapOut(_anyTokenOut, amountOut);
 
@@ -364,7 +442,7 @@ contract MultichainProxy is OnlySourceFunctionality {
         bytes calldata _data,
         bool _isNativeOut,
         uint256 _value
-    ) internal onlyAvailableDex(_dex)  returns (uint256) {
+    ) internal onlyAvailableDex(_dex) returns (uint256) {
         uint256 balanceBeforeSwap = _isNativeOut
             ? address(this).balance
             : IERC20Upgradeable(_tokenOut).balanceOf(address(this));
@@ -377,7 +455,10 @@ contract MultichainProxy is OnlySourceFunctionality {
                 : IERC20Upgradeable(_tokenOut).balanceOf(address(this)) - balanceBeforeSwap;
     }
 
-    function _receiveTokens(address _tokenIn, uint256 _amountIn) internal returns (uint256, uint256) {
+    function _receiveTokens(address _tokenIn, uint256 _amountIn)
+        internal
+        returns (uint256, uint256)
+    {
         uint256 balanceBeforeTransfer = IERC20Upgradeable(_tokenIn).balanceOf(address(this));
         IERC20Upgradeable(_tokenIn).safeTransferFrom(msg.sender, address(this), _amountIn);
         uint256 balanceAfterTransfer = IERC20Upgradeable(_tokenIn).balanceOf(address(this));
@@ -408,7 +489,12 @@ contract MultichainProxy is OnlySourceFunctionality {
         SmartApprove.smartApprove(_underlyingToken, _amount, _anyRouter); // TODO test approves only on underlying
         // Was the token wrapping another token?
         if (_anyTokenIn != _underlyingToken) {
-            IAnyswapRouter(_anyRouter).anySwapOutUnderlying(_anyTokenIn, _recipient, _amount, _dstChain);
+            IAnyswapRouter(_anyRouter).anySwapOutUnderlying(
+                _anyTokenIn,
+                _recipient,
+                _amount,
+                _dstChain
+            );
         } else {
             IAnyswapRouter(_anyRouter).anySwapOut(_anyTokenIn, _recipient, _amount, _dstChain);
         }
@@ -427,7 +513,11 @@ contract MultichainProxy is OnlySourceFunctionality {
         address _recipient,
         uint256 _dstChain
     ) private {
-        IAnyswapRouter(_anyRouter).anySwapOutNative{value: _amount}(_anyTokenIn, _recipient, _dstChain);
+        IAnyswapRouter(_anyRouter).anySwapOutNative{value: _amount}(
+            _anyTokenIn,
+            _recipient,
+            _dstChain
+        );
     }
 
     function _checkParamsBeforeBridge(
@@ -435,7 +525,7 @@ contract MultichainProxy is OnlySourceFunctionality {
         address _transitToken,
         uint256 _amount,
         uint256 _dstChain
-    ) private onlyAvailableAnyRouter(_anyRouter) view {
+    ) private view onlyAvailableAnyRouter(_anyRouter) {
         // initial min amount is 0
         // revert in case we received 0 tokens after swap
         if (_amount <= minTokenAmount[_transitToken]) {
@@ -447,7 +537,10 @@ contract MultichainProxy is OnlySourceFunctionality {
 
     /// @dev Unwraps the underlying token from the Anyswap token if necessary
     /// @param token The (maybe) wrapped token
-    function _getUnderlyingToken(address token) private returns (address underlyingToken, bool isNative) {
+    function _getUnderlyingToken(address token)
+        private
+        returns (address underlyingToken, bool isNative)
+    {
         // Token must implement IAnyswapToken interface
         if (token == address(0)) revert ZeroAddress();
         underlyingToken = IAnyswapToken(token).underlying();
@@ -470,5 +563,4 @@ contract MultichainProxy is OnlySourceFunctionality {
 
         whitelistRegistry = _newWhitelistRegistry;
     }
-
 }
