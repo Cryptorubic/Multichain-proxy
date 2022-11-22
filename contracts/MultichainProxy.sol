@@ -398,9 +398,9 @@ contract MultichainProxy is OnlySourceFunctionality {
         }
         // max amount for multichain is very big, no checks for that
 
-        // check if token is in WL is missing. Multichain has houndreds of any tokens, so it was decided
-        // to skip this check. There is no known contract with "SwapOut" selector, which will 
-        // be able to steal rubic commission from user for now.
+        // Check if token is in WL is missing. Multichain has houndreds of any tokens, 
+        // so it was decided to skip this check. There is no known contract with SwapOut selector,
+        //  which will be able to steal rubic fees for now.
     }
 
     function _swapOutTokens(
@@ -468,10 +468,6 @@ contract MultichainProxy is OnlySourceFunctionality {
         uint256 balanceAfterTransfer = IERC20Upgradeable(_tokenIn).balanceOf(address(this));
         _amountIn = balanceAfterTransfer - balanceBeforeTransfer;
         return (_amountIn, balanceAfterTransfer);
-    }
-
-    function sweepTokens(address _token, uint256 _amount) external onlyAdmin {
-        sendToken(_token, _amount, msg.sender);
     }
 
     /// @dev Contains the business logic for the token bridge via Anyswap
