@@ -470,7 +470,7 @@ contract MultichainProxy is OnlySourceFunctionality {
         address _underlyingToken
     ) private {
         // Give Anyswap approval to bridge tokens
-        SmartApprove.smartApprove(_underlyingToken, _amount, _anyRouter); // TODO test approves only on underlying
+        SmartApprove.smartApprove(_underlyingToken, _amount, _anyRouter);
         // Was the token wrapping another token?
         if (_anyTokenIn != _underlyingToken) {
             IAnyswapRouter(_anyRouter).anySwapOutUnderlying(
