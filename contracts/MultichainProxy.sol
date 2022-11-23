@@ -380,7 +380,7 @@ contract MultichainProxy is OnlySourceFunctionality {
         }
         // max amount for multichain is very big, no checks for that
 
-        // Check if token is in WL is missing. Multichain has houndreds of any tokens, 
+        // Check if token is in WL is missing. Multichain has hundreds of any tokens, 
         // so it was decided to skip this check. There is no known contract with SwapOut selector,
         //  which will be able to steal rubic fees for now.
     }
