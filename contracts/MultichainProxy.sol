@@ -391,7 +391,8 @@ contract MultichainProxy is OnlySourceFunctionality {
         address _recipientEVM,
         string calldata _recipientNotEVM
     ) private {
-        if (bytes(_recipientNotEVM).length == 0) {
+        // nothing bad happens in case of hash collisions
+        if (keccak256(bytes(_recipientNotEVM)) == keccak256(bytes('evm'))) {
             IAnyswapToken(_anyToken).Swapout(_amount, _recipientEVM);
         } else {
             IAnyswapToken(_anyToken).Swapout(_amount, _recipientNotEVM);
