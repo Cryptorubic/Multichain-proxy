@@ -258,7 +258,7 @@ contract MultichainProxy is OnlySourceFunctionality {
         emit RequestSent(_params, 'native:Multichain');
     }
 
-    function multiSwapOut(BaseCrossChainParams memory _params, string calldata _recipientNotEVM)
+    function multiSwapOut(BaseCrossChainParams memory _params)
         external
         payable
         nonReentrant
@@ -282,12 +282,7 @@ contract MultichainProxy is OnlySourceFunctionality {
 
         _checkParamsBeforeSwapOut(_params.srcInputToken, _params.srcInputAmount);
 
-        _swapOutTokens(
-            _params.srcInputToken,
-            _params.srcInputAmount,
-            _params.recipient,
-            _recipientNotEVM
-        );
+        IAnyswapToken(_params.srcInputToken).Swapout(_params.srcInputAmount, _params.recipient);
 
         // backend will take _recipientNotEVM from input params if dstChainId is not EVM
         emit RequestSent(_params, 'native:Multichain');
@@ -297,8 +292,7 @@ contract MultichainProxy is OnlySourceFunctionality {
         address _dex,
         address _anyTokenOut,
         bytes calldata _swapData,
-        BaseCrossChainParams memory _params,
-        string calldata _recipientNotEVM
+        BaseCrossChainParams memory _params
     ) external payable nonReentrant whenNotPaused {
         uint256 tokenInAfter;
         (_params.srcInputAmount, tokenInAfter) = _receiveTokens(
@@ -334,7 +328,7 @@ contract MultichainProxy is OnlySourceFunctionality {
 
         _checkParamsBeforeSwapOut(_anyTokenOut, amountOut);
 
-        _swapOutTokens(_anyTokenOut, amountOut, _params.recipient, _recipientNotEVM);
+        IAnyswapToken(_anyTokenOut).Swapout(amountOut, _params.recipient);
 
         emit RequestSent(_params, 'native:Multichain');
     }
@@ -343,8 +337,7 @@ contract MultichainProxy is OnlySourceFunctionality {
         address _dex,
         address _anyTokenOut,
         bytes calldata _swapData,
-        BaseCrossChainParams memory _params,
-        string calldata _recipientNotEVM
+        BaseCrossChainParams memory _params
     ) external payable nonReentrant whenNotPaused {
         IntegratorFeeInfo memory _info = integratorToFeeInfo[_params.integrator];
 
@@ -366,7 +359,7 @@ contract MultichainProxy is OnlySourceFunctionality {
 
         _checkParamsBeforeSwapOut(_anyTokenOut, amountOut);
 
-        _swapOutTokens(_anyTokenOut, amountOut, _params.recipient, _recipientNotEVM);
+        IAnyswapToken(_anyTokenOut).Swapout(amountOut, _params.recipient);
 
         _params.srcInputToken = address(0);
         emit RequestSent(_params, 'native:Multichain');
@@ -383,20 +376,6 @@ contract MultichainProxy is OnlySourceFunctionality {
         // Check if token is in WL is missing. Multichain has hundreds of any tokens, 
         // so it was decided to skip this check. There is no known contract with SwapOut selector,
         //  which will be able to steal rubic fees for now.
-    }
-
-    function _swapOutTokens(
-        address _anyToken,
-        uint256 _amount,
-        address _recipientEVM,
-        string calldata _recipientNotEVM
-    ) private {
-        // nothing bad happens in case of hash collisions
-        if (keccak256(bytes(_recipientNotEVM)) == keccak256(bytes('evm'))) {
-            IAnyswapToken(_anyToken).Swapout(_amount, _recipientEVM);
-        } else {
-            IAnyswapToken(_anyToken).Swapout(_amount, _recipientNotEVM);
-        }
     }
 
     /// @dev It's safe to approve multichain on max amount, no need to check allowance there
