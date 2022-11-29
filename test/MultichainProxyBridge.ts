@@ -154,7 +154,6 @@ describe('Multichain Proxy', () => {
             dstOutputToken = anySwapOutEvm.address,
             integrator = ethers.constants.AddressZero,
             recipient = swapper.address,
-            recipientNotEvm = 'evm',
             srcInputAmount = DEFAULT_AMOUNT_IN,
             dstMinOutputAmount = MIN_TOKEN_AMOUNT,
             dstChainID = DEFAULT_DST_CHAIN,
@@ -183,7 +182,6 @@ describe('Multichain Proxy', () => {
                         integrator,
                         router
                     },
-                    recipientNotEvm,
                     { value: value }
                 );
             } else {
@@ -201,7 +199,6 @@ describe('Multichain Proxy', () => {
                         integrator,
                         router
                     },
-                    recipientNotEvm,
                     { value: value }
                 );
             }
@@ -228,7 +225,6 @@ describe('Multichain Proxy', () => {
                 integrator,
                 router
             },
-            recipientNotEvm,
             { value: value }
         );
     }
@@ -732,20 +728,6 @@ describe('Multichain Proxy', () => {
                 );
             });
 
-            it('should revert with incorrect recipent to evm', async () => {
-                await expect(callBridgeWithSwapOut('0x', { recipientNotEvm: '123' })).to.be
-                    .reverted;
-            });
-
-            it('should bridge to not-evm blockchain', async () => {
-                await expect(
-                    callBridgeWithSwapOut('0x', {
-                        srcInputToken: anySwapOutNotEvm.address,
-                        recipientNotEvm: '123'
-                    })
-                ).to.emit(multichain, 'RequestSent');
-            });
-
             it('should revert with incorrect recipent to not evm', async () => {
                 await expect(
                     callBridgeWithSwapOut('0x', { srcInputToken: anySwapOutNotEvm.address })
@@ -772,7 +754,6 @@ describe('Multichain Proxy', () => {
                             integrator: ethers.constants.AddressZero,
                             router: anySwapOutEvm.address
                         },
-                        '',
                         { value: value.add(1) }
                     )
                 ).to.be.revertedWith('TooMuchValue()');
@@ -820,25 +801,6 @@ describe('Multichain Proxy', () => {
                         dex: dexMock.address
                     })
                 ).to.be.revertedWith('DexNotAvailable()');
-            });
-
-            it('should swap tokens and swapout to not evm blockchain without token fees', async () => {
-                await multichain.setRubicPlatformFee(0);
-
-                let swapData = await encoder.encodeDEXMock(
-                    anySwapOutEvm.address,
-                    DEFAULT_AMOUNT_IN,
-                    anySwapOutNotEvm.address
-                );
-
-                await expect(
-                    callBridgeWithSwapOut(swapData, {
-                        srcInputToken: anySwapOutEvm.address,
-                        dex: dexMock.address,
-                        recipientNotEvm: '123',
-                        dstOutputToken: anySwapOutNotEvm.address
-                    })
-                ).to.emit(multichain, 'RequestSent');
             });
 
             it('should revert when swapping differenat amount spent', async () => {
@@ -902,40 +864,6 @@ describe('Multichain Proxy', () => {
                         swapData,
                         {
                             dex: dexMock.address
-                        },
-                        DEFAULT_AMOUNT_IN
-                    )
-                ).to.emit(multichain, 'RequestSent');
-            });
-
-            it('should swap eth and swapout to not evm blockchain without token fees', async () => {
-                await multichain.setRubicPlatformFee(0);
-
-                let swapData = await encoder.encodeDEXMockNative(anySwapOutNotEvm.address);
-
-                await expect(
-                    callBridgeWithSwapOut(
-                        swapData,
-                        {
-                            dex: dexMock.address,
-                            recipientNotEvm: '123',
-                            dstOutputToken: anySwapOutNotEvm.address
-                        },
-                        DEFAULT_AMOUNT_IN
-                    )
-                ).to.emit(multichain, 'RequestSent');
-            });
-
-            it('should swap eth and swapout to not evm blockchain with token fees', async () => {
-                let swapData = await encoder.encodeDEXMockNative(anySwapOutNotEvm.address);
-
-                await expect(
-                    callBridgeWithSwapOut(
-                        swapData,
-                        {
-                            dex: dexMock.address,
-                            recipientNotEvm: '123',
-                            dstOutputToken: anySwapOutNotEvm.address
                         },
                         DEFAULT_AMOUNT_IN
                     )
