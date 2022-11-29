@@ -4,8 +4,6 @@
 import hre, { ethers, network, upgrades } from 'hardhat';
 import { RubicWhitelist } from '../typechain';
 const clc = require('cli-color');
-import Config from '../config/onChainConfig.json';
-import MultichainConfig from '../config/multichainRoutersConfig.json';
 import WnativeConfig from '../config/wrappedNativeConfig.json';
 
 async function main() {
@@ -17,7 +15,7 @@ async function main() {
         'kovan',
         'bscTest',
         'polygonMumbai',
-        'defiKingdom',
+        'defiKingdom'
         // 'polygon',
         // 'fantom',
         // 'bsc',
@@ -37,10 +35,6 @@ async function main() {
             hre.changeNetwork(blockchain);
 
             const MultichainProxyFactory = await hre.ethers.getContractFactory('MultichainProxy');
-            const onChain = Config.chains.find(_chain => _chain.id === network.config.chainId)!;
-            const multiConfig = MultichainConfig.chains.find(
-                _chain => _chain.id === network.config.chainId
-            )!;
             const wrappedConfig = WnativeConfig.chains.find(
                 _chain => _chain.id === network.config.chainId
             )!;
@@ -50,7 +44,7 @@ async function main() {
                 wrappedConfig.wnative,
                 0,
                 0,
-                '0x3330ee066fc570D56b4dfF6dE707C6A2998fd723',
+                '0x7445a1617cb03438632993707b272951ff15600f',
                 [],
                 [],
                 [],
@@ -69,7 +63,11 @@ async function main() {
 
             await new Promise(r => setTimeout(r, 15000));
 
-            console.log(`waiting for verification on ${clc.blue(blockchain)} at ${deploy.address}`);
+            console.log(
+                `waiting for verification on ${clc.blue(blockchain)} at ${
+                    multichainContract.address
+                }`
+            );
 
             await hre.run('verify:verify', {
                 address: multichainContract.address,
@@ -77,7 +75,7 @@ async function main() {
                     wrappedConfig.wnative,
                     0,
                     0,
-                    '0x3330ee066fc570D56b4dfF6dE707C6A2998fd723',
+                    '0x7445a1617cb03438632993707b272951ff15600f',
                     [],
                     [],
                     [],
