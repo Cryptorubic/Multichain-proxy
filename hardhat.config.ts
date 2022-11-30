@@ -261,6 +261,13 @@ module.exports = {
             live: true,
             saveDeployments: true,
             accounts: [`0x${DEFAULT_PRIVATE_KEY}`]
+        },
+        harmony: {
+            url: 'https://api.harmony.one',
+            chainId: 1666600000,
+            live: true,
+            saveDeployments: true,
+            accounts: [`0x${DEFAULT_PRIVATE_KEY}`]
         }
     },
     etherscan: {

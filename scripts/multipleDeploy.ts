@@ -16,6 +16,8 @@ async function main() {
         'bscTest',
         'polygonMumbai',
         'defiKingdom'
+        // 'aurora', // be careful with this one, they have free transactions
+        // harmony,
         // 'polygon',
         // 'fantom',
         // 'bsc',
@@ -39,16 +41,20 @@ async function main() {
                 _chain => _chain.id === network.config.chainId
             )!;
 
+            const admin = wrappedConfig.admin
+                ? wrappedConfig.admin
+                : '0xaE6FAf6C1c0006b81ce04308E225B01D9b667A6E';
+
             console.log(`start deploy on ${clc.blue(blockchain)}`);
             const multichainContract = await MultichainProxyFactory.deploy(
                 wrappedConfig.wnative,
                 0,
                 0,
-                '0x7445a1617cb03438632993707b272951ff15600f',
+                wrappedConfig.whitelist,
                 [],
                 [],
                 [],
-                '0x0000006f0994c53C5D63E72dfA8Cf38412E874A4'
+                admin
             );
 
             console.log(`waiting on ${clc.blue(blockchain)}`);
@@ -75,11 +81,11 @@ async function main() {
                     wrappedConfig.wnative,
                     0,
                     0,
-                    '0x7445a1617cb03438632993707b272951ff15600f',
+                    wrappedConfig.whitelist,
                     [],
                     [],
                     [],
-                    '0x0000006f0994c53C5D63E72dfA8Cf38412E874A4'
+                    admin
                 ]
             });
 
