@@ -31,7 +31,6 @@ contract TestERCApprove {
         return true;
     }
 
-
     function transfer(address recipient, uint256 amount) external returns (bool) {
         uint256 balanceBefore = balanceOf[msg.sender];
         require(balanceBefore >= amount, 'insufficient balance');

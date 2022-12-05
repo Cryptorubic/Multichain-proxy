@@ -7,6 +7,8 @@ import 'hardhat-contract-sizer';
 import 'hardhat-gas-reporter';
 import 'solidity-coverage';
 import '@openzeppelin/hardhat-upgrades';
+import 'hardhat-change-network';
+
 
 import { SolcUserConfig } from 'hardhat/types';
 
@@ -231,6 +233,41 @@ module.exports = {
             live: true,
             saveDeployments: true,
             accounts: [`0x${DEFAULT_PRIVATE_KEY}`]
+        },
+        klaytn: {
+            url: 'https://public-node-api.klaytnapi.com/v1/cypress',
+            chainId: 8217,
+            live: true,
+            saveDeployments: true,
+            accounts: [`0x${DEFAULT_PRIVATE_KEY}`]
+        },
+        velas: {
+            url: 'https://evmexplorer.velas.com/rpc',
+            chainId: 106,
+            live: true,
+            saveDeployments: true,
+            accounts: [`0x${DEFAULT_PRIVATE_KEY}`]
+        },
+        syscoin: {
+            url: 'https://rpc.syscoin.org',
+            chainId: 57,
+            live: true,
+            saveDeployments: true,
+            accounts: [`0x${DEFAULT_PRIVATE_KEY}`]
+        },
+        defiKingdom: {
+            url: 'https://subnets.avax.network/defi-kingdoms/dfk-chain/rpc',
+            chainId: 53935,
+            live: true,
+            saveDeployments: true,
+            accounts: [`0x${DEFAULT_PRIVATE_KEY}`]
+        },
+        harmony: {
+            url: 'https://api.harmony.one',
+            chainId: 1666600000,
+            live: true,
+            saveDeployments: true,
+            accounts: [`0x${DEFAULT_PRIVATE_KEY}`]
         }
     },
     etherscan: {
@@ -267,9 +304,9 @@ module.exports = {
             // moonbeam
             moonbeam: process.env.MOONBEAM_API_KEY,
             // moonriver
-            moonriver: process.env.MOONRIVER_API_KEY,
+            moonriver: process.env.MOONRIVER_API_KEY
         },
-        // apiKey: 
+        // apiKey:
         // `${KAVA}`,
         customChains: [
             {
@@ -313,12 +350,12 @@ module.exports = {
                 }
             },
             {
-              network: "moonbeam",
-              chainId: 1313161554,
-              urls: {
-                apiURL: "https://api.aurorascan.dev/api",
-                browserURL: "https://moonbeam.moonscan.io/"
-              }
+                network: 'moonbeam',
+                chainId: 1313161554,
+                urls: {
+                    apiURL: 'https://api.aurorascan.dev/api',
+                    browserURL: 'https://moonbeam.moonscan.io/'
+                }
             },
             {
                 network: 'boba',

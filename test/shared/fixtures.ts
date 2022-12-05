@@ -1,8 +1,22 @@
 /* eslint-disable @typescript-eslint/no-magic-numbers */
 import { Fixture } from 'ethereum-waffle';
 import { ethers, network } from 'hardhat';
-import { MultichainProxy, TestERC20, WETH9, Encode, TestUnderlying, TestERCApprove } from '../../typechain';
+import {
+    MultichainProxy,
+    TestERC20,
+    WETH9,
+    Encode,
+    TestUnderlying,
+    TestERCApprove,
+    LtcSwapAsset,
+    AnyswapV4ERC20,
+    TestDEX
+} from '../../typechain';
 import WETHJSON from '../../artifacts/contracts/test/WETH9.sol/WETH9.json';
+import {
+    abi as WHITELIST_ABI,
+    bytecode as WHITELIST_BYTECODE
+} from 'rubic-whitelist-contract/artifacts/contracts/test/WhitelistMock.sol/WhitelistMock.json';
 import {
     RUBIC_PLATFORM_FEE,
     MIN_TOKEN_AMOUNT,
@@ -12,7 +26,9 @@ import {
     NATIVE_POLY,
     SWAP_TOKEN,
     TRANSIT_TOKEN,
-    DEX
+    DEX,
+    anyERCV1,
+    anyERCV5LTC
 } from './consts';
 import { expect } from 'chai';
 
@@ -24,6 +40,10 @@ interface DeployContractFixture {
     ercUnderlying: TestUnderlying;
     wnative: WETH9;
     ercApprove: TestERCApprove;
+    anySwapOutEvm: AnyswapV4ERC20;
+    anySwapOutNotEvm: LtcSwapAsset;
+    dexMock: TestDEX;
+    whitelist: Contract;
 }
 
 export const deployContractFixtureInFork: Fixture<DeployContractFixture> = async function (
@@ -49,8 +69,40 @@ export const deployContractFixtureInFork: Fixture<DeployContractFixture> = async
     let wnative = wnativeFactory.attach(NATIVE_POLY) as WETH9;
     wnative = wnative.connect(wallets[0]);
 
+    const AnySwapOutNotEvmFactory = await ethers.getContractFactory('LtcSwapAsset');
+    let anySwapOutNotEvm = (await AnySwapOutNotEvmFactory.deploy()) as LtcSwapAsset;
+    anySwapOutNotEvm = anySwapOutNotEvm.connect(wallets[0]);
+
+    const AnySwapOutEvmFactory = await ethers.getContractFactory('AnyswapV4ERC20');
+    let anySwapOutEvm = (await AnySwapOutEvmFactory.deploy()) as AnyswapV4ERC20;
+    anySwapOutEvm = anySwapOutEvm.connect(wallets[0]);
+
+    const dexMockFactory = await ethers.getContractFactory('TestDEX');
+    let dexMock = (await dexMockFactory.deploy()) as TestDEX;
+    dexMock = dexMock.connect(wallets[0]);
+
     const encodeFactory = await ethers.getContractFactory('Encode');
     let encoder = (await encodeFactory.deploy()) as Encode;
+
+    const whitelistFactory = await ethers.getContractFactory(WHITELIST_ABI, WHITELIST_BYTECODE);
+    const whitelist = await whitelistFactory.deploy([], wallets[0].address);
+
+    await whitelist.addDEXs([DEX, dexMock.address]);
+    await whitelist.addAnyRouters([
+        ANY_ROUTER_POLY,
+        anySwapOutEvm.address,
+        anySwapOutNotEvm.address
+    ]);
+
+    const routers = await whitelist.getAvailableDEXs();
+    await expect(routers).to.deep.eq([DEX, dexMock.address]);
+
+    const AnyRouters = await whitelist.getAvailableAnyRouters();
+    await expect(AnyRouters).to.deep.eq([
+        ANY_ROUTER_POLY,
+        anySwapOutEvm.address,
+        anySwapOutNotEvm.address
+    ]);
 
     const MultichainProxyFactory = await ethers.getContractFactory('MultichainProxy');
 
@@ -58,11 +110,11 @@ export const deployContractFixtureInFork: Fixture<DeployContractFixture> = async
         NATIVE_POLY,
         FIXED_CRYPTO_FEE,
         RUBIC_PLATFORM_FEE,
-        [DEX],
-        [ANY_ROUTER_POLY],
+        whitelist.address,
         [transitToken.address, swapToken.address],
         [MIN_TOKEN_AMOUNT, MIN_TOKEN_AMOUNT],
-        [MAX_TOKEN_AMOUNT, MAX_TOKEN_AMOUNT]
+        [MAX_TOKEN_AMOUNT, MAX_TOKEN_AMOUNT],
+        wallets[0].address
     )) as MultichainProxy;
 
     // part for seting storage
@@ -103,6 +155,10 @@ export const deployContractFixtureInFork: Fixture<DeployContractFixture> = async
         transitToken,
         ercUnderlying,
         wnative,
-        ercApprove
+        ercApprove,
+        anySwapOutEvm,
+        anySwapOutNotEvm,
+        dexMock,
+        whitelist
     };
 };
