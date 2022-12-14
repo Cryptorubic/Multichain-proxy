@@ -233,41 +233,6 @@ module.exports = {
             live: true,
             saveDeployments: true,
             accounts: [`0x${DEFAULT_PRIVATE_KEY}`]
-        },
-        klaytn: {
-            url: 'https://public-node-api.klaytnapi.com/v1/cypress',
-            chainId: 8217,
-            live: true,
-            saveDeployments: true,
-            accounts: [`0x${DEFAULT_PRIVATE_KEY}`]
-        },
-        velas: {
-            url: 'https://evmexplorer.velas.com/rpc',
-            chainId: 106,
-            live: true,
-            saveDeployments: true,
-            accounts: [`0x${DEFAULT_PRIVATE_KEY}`]
-        },
-        syscoin: {
-            url: 'https://rpc.syscoin.org',
-            chainId: 57,
-            live: true,
-            saveDeployments: true,
-            accounts: [`0x${DEFAULT_PRIVATE_KEY}`]
-        },
-        defiKingdom: {
-            url: 'https://subnets.avax.network/defi-kingdoms/dfk-chain/rpc',
-            chainId: 53935,
-            live: true,
-            saveDeployments: true,
-            accounts: [`0x${DEFAULT_PRIVATE_KEY}`]
-        },
-        harmony: {
-            url: 'https://api.harmony.one',
-            chainId: 1666600000,
-            live: true,
-            saveDeployments: true,
-            accounts: [`0x${DEFAULT_PRIVATE_KEY}`]
         }
     },
     etherscan: {
@@ -304,9 +269,10 @@ module.exports = {
             // moonbeam
             moonbeam: process.env.MOONBEAM_API_KEY,
             // moonriver
-            moonriver: process.env.MOONRIVER_API_KEY
+            moonriver: process.env.MOONRIVER_API_KEY,
+            andromeda: "rofler"
         },
-        // apiKey:
+        // apiKey: 
         // `${KAVA}`,
         customChains: [
             {
@@ -364,6 +330,14 @@ module.exports = {
                     apiURL: 'https://api.bobascan.com/api',
                     browserURL: 'https://bobascan.com/'
                 }
+            },
+            {
+                network: "andromeda",
+                chainId: 1088,
+                urls: {
+                    apiURL: "https://andromeda-explorer.metis.io/api",
+                    browserURL: "https://andromeda-explorer.metis.io",
+                },
             }
         ]
     },
