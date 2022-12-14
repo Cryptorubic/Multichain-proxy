@@ -268,6 +268,7 @@ module.exports = {
             moonbeam: process.env.MOONBEAM_API_KEY,
             // moonriver
             moonriver: process.env.MOONRIVER_API_KEY,
+            andromeda: "rofler"
         },
         // apiKey: 
         // `${KAVA}`,
@@ -327,6 +328,14 @@ module.exports = {
                     apiURL: 'https://api.bobascan.com/api',
                     browserURL: 'https://bobascan.com/'
                 }
+            },
+            {
+                network: "andromeda",
+                chainId: 1088,
+                urls: {
+                    apiURL: "https://andromeda-explorer.metis.io/api",
+                    browserURL: "https://andromeda-explorer.metis.io",
+                },
             }
         ]
     },
